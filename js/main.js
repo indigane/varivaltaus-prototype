@@ -117,6 +117,13 @@ function handleStart() {
     setupUI(gameState, handleColorSelect, handleReset, handleStep, handleTogglePlay);
     renderer.render(gameState);
 
+    const hasBots = configs.some(c => c.control !== 'human');
+    if (hasBots) {
+        isPlaying = true;
+        const btn = document.getElementById('play-pause-button');
+        if (btn) btn.textContent = 'Pause';
+    }
+
     if (isPlaying) {
         startAutoplay();
     } else {
