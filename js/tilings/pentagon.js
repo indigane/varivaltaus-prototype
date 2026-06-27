@@ -12,11 +12,9 @@ export function generatePrismaticPentagonBoard(options) {
 
 /**
  * Cairo pentagonal tiling is a dual of the snub square tiling.
- * It can be represented as a square grid where each cell is divided into 2 pentagons,
- * with the orientation of the division alternating in a checkerboard pattern.
- *
- * Prismatic pentagonal tiling (also known as Type 1 or "house" tiling)
- * consists of interlocking "house" shapes.
+ * We implement it using a square grid where each cell is divided into 2 pentagons,
+ * alternating orientation in a checkerboard pattern.
+ * Midpoints are added to all edges to ensure perfect tiling and neighbor detection.
  */
 export function generatePentagonBoardByEdges(options, type) {
     const { cols, rows, tileSize: s, colorCount, rng } = options;
@@ -30,81 +28,71 @@ export function generatePentagonBoardByEdges(options, type) {
                 const x = c * s;
                 const y = r * s;
 
-                // We add midpoints to all square edges to ensure neighbor detection
-                // works correctly between horizontal and vertical cells (T-junctions).
                 if ((r + c) % 2 === 0) {
-                    // Horizontal division (Top and Bottom pentagons)
+                    // Horizontal division (Top and Bottom)
                     rawTiles.push({
                         points: [
-                            [x, y], [x + m, y], [x + s, y],      // Top edge (with midpoint)
+                            [x, y], [x + m, y], [x + s, y],      // Top edge
                             [x + s, y + m],                     // Right midpoint
-                            [x + m, y + m - d],                // Center "V" peak
+                            [x + m, y + m - d],                // Peak
                             [x, y + m]                          // Left midpoint
                         ]
                     });
                     rawTiles.push({
                         points: [
-                            [x, y + m], [x + m, y + m - d], [x + s, y + m], // Center "V" (reversed)
-                            [x + s, y + s], [x + m, y + s], [x, y + s]      // Bottom edge (with midpoint)
+                            [x, y + m], [x + m, y + m - d], [x + s, y + m], // Midline
+                            [x + s, y + s], [x + m, y + s], [x, y + s]      // Bottom edge
                         ]
                     });
                 } else {
-                    // Vertical division (Left and Right pentagons)
+                    // Vertical division (Left and Right)
                     rawTiles.push({
                         points: [
                             [x, y], [x + m, y],                 // Top midpoint
-                            [x + m - d, y + m],                // Center "V" peak
+                            [x + m - d, y + m],                // Peak
                             [x + m, y + s], [x, y + s],         // Bottom midpoint
-                            [x, y + m]                          // Left edge
+                            [x, y + m], [x, y]                  // Left edge
                         ]
                     });
                     rawTiles.push({
                         points: [
-                            [x + m, y], [x + s, y],             // Top edge
-                            [x + s, y + m],                     // Right edge
-                            [x + s, y + s], [x + m, y + s],     // Bottom edge
-                            [x + m - d, y + m]                 // Center "V" peak
+                            [x + m, y], [x + s, y], [x + s, y + m], [x + s, y + s], // Right edge
+                            [x + m, y + s],                     // Bottom midpoint
+                            [x + m - d, y + m]                 // Peak
                         ]
                     });
                 }
             }
         }
     } else {
-        // Prismatic pentagonal tiling (House tiling)
-        // We use a grid of interlocking houses.
-        // A row of "down-pointing" houses followed by a row of "up-pointing" houses.
-        const h = s * 0.6; // height of the rectangular part
-        const p = s * 0.4; // height of the triangular part
-        const rowHeight = h + p;
+        // Prismatic (House) tiling: Interlocking
+        const h = s * 0.7; // height of the square part
+        const p = s * 0.3; // height of the peak
 
         for (let r = 0; r < rows; r++) {
-            const yBase = r * rowHeight;
             const isOdd = r % 2 === 1;
-            const xOff = isOdd ? s / 2 : 0;
-
+            const yBase = r * h;
             for (let c = 0; c < cols; c++) {
-                const x = c * s + xOff;
+                const x = c * s + (isOdd ? s/2 : 0);
+
                 if (!isOdd) {
-                    // Down-pointing house
+                    // Downward house
                     rawTiles.push({
                         points: [
-                            [x, yBase], [x + m, yBase], [x + s, yBase], // Flat top
-                            [x + s, yBase + h],                         // Right shoulder
-                            [x + m, yBase + h + p],                     // Bottom peak
-                            [x, yBase + h]                              // Left shoulder
+                            [x, yBase], [x + m, yBase], [x + s, yBase], // Top
+                            [x + s, yBase + m], [x + s, yBase + h],     // Right
+                            [x + m, yBase + h + p],                     // Peak
+                            [x, yBase + h], [x, yBase + m]              // Left
                         ]
                     });
                 } else {
-                    // Up-pointing house
-                    // To interlock, the peak of the up-house should touch the shoulder-level of the row above?
-                    // Actually, let's just use a simpler non-interlocking grid for now
-                    // that still looks like a house tiling.
+                    // Upward house
                     rawTiles.push({
                         points: [
-                            [x + m, yBase],                             // Top peak
-                            [x + s, yBase + p],                         // Right shoulder
-                            [x + s, yBase + p + h], [x + m, yBase + p + h], [x, yBase + p + h], // Flat bottom
-                            [x, yBase + p]                              // Left shoulder
+                            [x + m, yBase - p],                         // Peak
+                            [x + s, yBase], [x + s, yBase + m], [x + s, yBase + h], // Right
+                            [x + m, yBase + h], [x, yBase + h],         // Bottom
+                            [x, yBase + m], [x, yBase]                  // Left
                         ]
                     });
                 }
@@ -112,17 +100,28 @@ export function generatePentagonBoardByEdges(options, type) {
         }
     }
 
-    // Shared edge neighbor detection
+    // Determine bounds to offset
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+    for (const t of rawTiles) {
+        for (const p of t.points) {
+            minX = Math.min(minX, p[0]);
+            minY = Math.min(minY, p[1]);
+            maxX = Math.max(maxX, p[0]);
+            maxY = Math.max(maxY, p[1]);
+        }
+    }
+
     const tiles = rawTiles.map((t, i) => ({
         id: i,
         colorId: Math.floor(rng() * colorCount),
         ownerId: null,
-        points: t.points,
+        points: t.points.map(p => [p[0] - minX, p[1] - minY]),
         neighbors: []
     }));
 
+    // Shared edge neighbor detection
     const edgeMap = new Map();
-    // Use a slightly larger epsilon for quantization to handle floating point issues
     const quantize = (v) => Math.round(v * 100) / 100;
 
     tiles.forEach(tile => {
@@ -158,8 +157,8 @@ export function generatePentagonBoardByEdges(options, type) {
     return {
         version: 1,
         generator: `pentagon-${type}`,
-        width: cols * s + (type === "prismatic" ? s/2 : 0),
-        height: rows * (type === "prismatic" ? (s * 1.0) : s),
+        width: maxX - minX,
+        height: maxY - minY,
         tiles,
         startTileIds: [0, tiles.length - 1]
     };

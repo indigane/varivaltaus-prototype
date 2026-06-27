@@ -14,30 +14,66 @@ export function findFairStartTileIds(board, playerCount) {
 
     const selectedIds = [];
 
+    // Find candidates that are likely to be "corners" or "extremes"
+    // 1. Minimum degree tiles
+    // 2. Geometric extremes (min/max X/Y)
+    const candidates = new Set();
+
+    let minDeg = Infinity;
+    for (const t of board.tiles) {
+        if (t.neighbors.length < minDeg) minDeg = t.neighbors.length;
+    }
+    board.tiles.forEach(t => {
+        if (t.neighbors.length === minDeg) candidates.add(t.id);
+    });
+
+    // Geometric extremes
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let minXT = 0, maxXT = 0, minYT = 0, maxYT = 0;
+
+    board.tiles.forEach(t => {
+        // Use centroid for geometric extremes
+        let cx = 0, cy = 0;
+        t.points.forEach(p => { cx += p[0]; cy += p[1]; });
+        cx /= t.points.length;
+        cy /= t.points.length;
+
+        if (cx < minX) { minX = cx; minXT = t.id; }
+        if (cx > maxX) { maxX = cx; maxXT = t.id; }
+        if (cy < minY) { minY = cy; minYT = t.id; }
+        if (cy > maxY) { maxY = cy; maxYT = t.id; }
+    });
+    candidates.add(minXT);
+    candidates.add(maxXT);
+    candidates.add(minYT);
+    candidates.add(maxYT);
+
+    // Also add some random samples to be safe, but prioritize extremes
+    const sampleSize = 20;
+    for (let i = 0; i < sampleSize; i++) {
+        candidates.add(Math.floor(Math.random() * board.tiles.length));
+    }
+
+    const candidateIds = Array.from(candidates);
+
     if (playerCount === 2) {
-        // For exactly 2 players, find the absolute diameter of the graph
-        // This ensures they are as far apart as possible (e.g. opposite corners)
         let maxDist = -1;
-        let bestPair = [0, board.tiles.length - 1];
+        let bestPair = [candidateIds[0], candidateIds[1] || candidateIds[0]];
 
-        // We can optimize this by only checking "boundary" tiles if we had them,
-        // but for now, we'll sample some tiles to keep it fast if the board is huge.
-        const sampleSize = Math.min(board.tiles.length, 100);
-        const step = Math.max(1, Math.floor(board.tiles.length / sampleSize));
-
-        for (let i = 0; i < board.tiles.length; i += step) {
-            const dMap = computeDistances(board, i);
-            for (let j = 0; j < board.tiles.length; j += step) {
-                if (dMap[j] > maxDist) {
+        // Double-ended BFS diameter search from candidates
+        for (const startId of candidateIds) {
+            const dMap = computeDistances(board, startId);
+            for (let j = 0; j < board.tiles.length; j++) {
+                if (dMap[j] !== undefined && dMap[j] > maxDist) {
                     maxDist = dMap[j];
-                    bestPair = [i, j];
+                    bestPair = [startId, j];
                 }
             }
         }
         selectedIds.push(...bestPair);
     } else {
-        // Start with the first tile
-        selectedIds.push(board.tiles[0].id);
+        // Start with the most extreme corner for multi-player greedy selection
+        selectedIds.push(minXT);
     }
 
     while (selectedIds.length < playerCount) {

@@ -7,8 +7,8 @@ export function generateHexBoard(options) {
   const tiles = [];
   const tileMap = new Map(); // key: "q,r", value: id
 
-  const width = Math.sqrt(3) * radius;
-  const height = 2 * radius;
+  const hexWidth = Math.sqrt(3) * radius;
+  const hexHeight = 2 * radius;
 
   if (shape === "rectangular") {
     let idCounter = 0;
@@ -20,6 +20,11 @@ export function generateHexBoard(options) {
       }
     }
 
+    // Determine bounds to offset
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+
+    const rawTiles = [];
     for (const [key, id] of tileMap.entries()) {
       const [q, r] = key.split(',').map(Number);
 
@@ -30,10 +35,13 @@ export function generateHexBoard(options) {
       for (let i = 0; i < 6; i++) {
         const angle_deg = 60 * i - 30;
         const angle_rad = Math.PI / 180 * angle_deg;
-        points.push([
-          x + radius * Math.cos(angle_rad),
-          y + radius * Math.sin(angle_rad)
-        ]);
+        const px = x + radius * Math.cos(angle_rad);
+        const py = y + radius * Math.sin(angle_rad);
+        points.push([px, py]);
+        minX = Math.min(minX, px);
+        minY = Math.min(minY, py);
+        maxX = Math.max(maxX, px);
+        maxY = Math.max(maxY, py);
       }
 
       const neighbors = [];
@@ -43,7 +51,7 @@ export function generateHexBoard(options) {
         if (neighborId !== undefined) neighbors.push(neighborId);
       }
 
-      tiles.push({
+      rawTiles.push({
         id,
         colorId: Math.floor(rng() * colorCount),
         ownerId: null,
@@ -52,20 +60,24 @@ export function generateHexBoard(options) {
       });
     }
 
-    const startTileIds = [
-      tileMap.get(`0,0`),
-      tileMap.get(`${cols - 1 - Math.floor((rows - 1) / 2)},${rows - 1}`),
-      tileMap.get(`${cols - 1},0`),
-      tileMap.get(`${-Math.floor((rows - 1) / 2)},${rows - 1}`)
-    ].filter(id => id !== undefined);
+    // Apply offset
+    const finalTiles = rawTiles.map(t => ({
+      ...t,
+      points: t.points.map(p => [p[0] - minX, p[1] - minY])
+    }));
 
     return {
       version: 1,
       generator: "hex",
-      width: cols * width,
-      height: rows * height * 0.75 + height * 0.25,
-      tiles,
-      startTileIds
+      width: maxX - minX,
+      height: maxY - minY,
+      tiles: finalTiles,
+      startTileIds: [
+        0,
+        finalTiles.length - 1,
+        tileMap.get(`${cols - 1},0`),
+        tileMap.get(`${-Math.floor((rows - 1) / 2)},${rows - 1}`)
+      ].filter(id => id !== undefined)
     };
   } else if (shape === "hexagonal") {
     // Large hexagon shape with side length 'rows'
@@ -80,28 +92,27 @@ export function generateHexBoard(options) {
       }
     }
 
-    // Centering offset
-    const centerX = 0;
-    const centerY = 0;
-    // We'll translate everything so the top-left-most point is near (0,0) later if needed,
-    // but for now let's just use radius * N to offset.
-    const offsetX = radius * Math.sqrt(3) * N;
-    const offsetY = radius * 1.5 * N;
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+    const rawTiles = [];
 
     for (const [key, id] of tileMap.entries()) {
       const [q, r] = key.split(',').map(Number);
 
-      const x = offsetX + radius * Math.sqrt(3) * (q + r / 2);
-      const y = offsetY + radius * 3/2 * r;
+      const x = radius * Math.sqrt(3) * (q + r / 2);
+      const y = radius * 3/2 * r;
 
       const points = [];
       for (let i = 0; i < 6; i++) {
         const angle_deg = 60 * i - 30;
         const angle_rad = Math.PI / 180 * angle_deg;
-        points.push([
-          x + radius * Math.cos(angle_rad),
-          y + radius * Math.sin(angle_rad)
-        ]);
+        const px = x + radius * Math.cos(angle_rad);
+        const py = y + radius * Math.sin(angle_rad);
+        points.push([px, py]);
+        minX = Math.min(minX, px);
+        minY = Math.min(minY, py);
+        maxX = Math.max(maxX, px);
+        maxY = Math.max(maxY, py);
       }
 
       const neighbors = [];
@@ -111,7 +122,7 @@ export function generateHexBoard(options) {
         if (neighborId !== undefined) neighbors.push(neighborId);
       }
 
-      tiles.push({
+      rawTiles.push({
         id,
         colorId: Math.floor(rng() * colorCount),
         ownerId: null,
@@ -119,6 +130,12 @@ export function generateHexBoard(options) {
         neighbors
       });
     }
+
+    // Apply offset
+    const finalTiles = rawTiles.map(t => ({
+      ...t,
+      points: t.points.map(p => [p[0] - minX, p[1] - minY])
+    }));
 
     const startTileIds = [
       tileMap.get(`0,${-N}`),
@@ -132,9 +149,9 @@ export function generateHexBoard(options) {
     return {
       version: 1,
       generator: "hex",
-      width: (2 * N + 1) * width,
-      height: (2 * N + 1) * height * 0.75 + height * 0.25,
-      tiles,
+      width: maxX - minX,
+      height: maxY - minY,
+      tiles: finalTiles,
       startTileIds
     };
   }
