@@ -113,6 +113,9 @@ function afterMove() {
 
     if (gameState.status === 'finished') {
         stopAutoplay();
+        isPlaying = false;
+        const btn = document.getElementById('play-pause-button');
+        if (btn) btn.textContent = 'Play';
     } else if (isPlaying) {
         startAutoplay();
     } else {
@@ -188,6 +191,8 @@ function stopAutoplay() {
 function handleReset() {
     stopAutoplay();
     isPlaying = false;
+    const btn = document.getElementById('play-pause-button');
+    if (btn) btn.textContent = 'Play';
     gameState = null;
     setupUI(null, handleColorSelect, handleReset, handleStep, handleTogglePlay);
     renderer.clear();

@@ -75,24 +75,35 @@ export function createGame(config) {
           }
         }
 
-        // Initial flood to capture same-colored adjacent tiles
-        floodCapture(state, player.id, startTile.colorId);
       }
     });
 
     // Apply starting area buffer: neighbors of owned tiles should not have the same color
+    // This must happen BEFORE initial floodCapture to prevent accidental expansion
     if (state.rules.startingAreaBuffer) {
-      for (const tile of state.board.tiles) {
-        if (tile.ownerId !== null) {
-          for (const neighborId of tile.neighbors) {
-            const neighbor = state.board.tiles[neighborId];
-            if (neighbor.ownerId === null && neighbor.colorId === tile.colorId) {
-              neighbor.colorId = (neighbor.colorId + 1) % state.colorCount;
+      // Repeat a few times to ensure we don't accidentally create new collisions
+      // (though unlikely with neutralOnly)
+      for (let pass = 0; pass < 2; pass++) {
+        for (const tile of state.board.tiles) {
+          if (tile.ownerId !== null) {
+            for (const neighborId of tile.neighbors) {
+              const neighbor = state.board.tiles[neighborId];
+              if (neighbor.ownerId === null && neighbor.colorId === tile.colorId) {
+                neighbor.colorId = (neighbor.colorId + 1) % state.colorCount;
+              }
             }
           }
         }
       }
     }
+
+    // Now perform initial flood capture to initialize internal territory and scores
+    state.players.forEach(player => {
+      const ownedTiles = state.board.tiles.filter(t => t.ownerId === player.id);
+      if (ownedTiles.length > 0) {
+        floodCapture(state, player.id, ownedTiles[0].colorId);
+      }
+    });
   }
 
   // Initial scores
