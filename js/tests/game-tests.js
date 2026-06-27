@@ -60,5 +60,33 @@ export function runGameTests() {
         assertEqual(state.players[0].score, 3, "Score should be 3");
     });
 
+    test("Starting area buffer prevents immediate capture", () => {
+        // Mock board where neighbors have the same color as the start tile
+        const board = {
+            width: 100, height: 100,
+            startTileIds: [0],
+            tiles: [
+                { id: 0, colorId: 0, ownerId: null, points: [], neighbors: [1] },
+                { id: 1, colorId: 0, ownerId: null, points: [], neighbors: [0] }
+            ]
+        };
+        const players = [{ id: 0, name: "P1", teamId: 0, control: "human", alive: true, score: 0 }];
+        const teams = [{ id: 0, name: "T1", playerIds: [0], score: 0 }];
+        const rules = {
+            startingAreaSize: 1,
+            startingAreaBuffer: true,
+            allowSameStartingColor: true,
+            captureMode: "neutralOnly",
+            colorRestrictions: "notOwnColor"
+        };
+
+        const state = createGame({ board, players, teams, colorCount: 6, rules });
+
+        assertEqual(state.board.tiles[0].ownerId, 0, "Tile 0 should be owned");
+        assert(state.board.tiles[1].colorId !== state.board.tiles[0].colorId, "Tile 1 should have its color changed by the buffer");
+        assertEqual(state.board.tiles[1].ownerId, null, "Tile 1 should NOT be captured during init");
+        assertEqual(state.players[0].score, 1, "Score should be exactly 1");
+    });
+
     console.log("Game Logic Tests Complete.");
 }

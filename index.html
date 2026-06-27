@@ -21,25 +21,54 @@
         <div id="ui-panel">
             <div id="setup-panel">
                 <h3>New Game</h3>
-                <div class="setup-group">
-                    <label for="player-count">Players:</label>
-                    <input type="number" id="player-count" value="2" min="1" max="4">
+                <div class="setup-grid">
+                    <div class="setup-group">
+                        <label for="color-count">Colors:</label>
+                        <input type="number" id="color-count" value="6" min="3" max="10">
+                    </div>
+                    <div class="setup-group">
+                        <label for="color-restrictions">Restrictions:</label>
+                        <select id="color-restrictions">
+                            <option value="notOwnColor">Not Own Color</option>
+                            <option value="notAnyPlayerColor" selected>Not Any Player Color</option>
+                            <option value="notAdjacentEnemyColor">Not Adjacent Enemy Color</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
+                        <label for="team-territory">Team Territory:</label>
+                        <select id="team-territory">
+                            <option value="separatePlayers">Separate</option>
+                            <option value="merged">Merged</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
+                        <label for="starting-area-size">Starting Area:</label>
+                        <input type="number" id="starting-area-size" value="1" min="1" max="10">
+                    </div>
+                    <div class="setup-group">
+                        <label>Starting Options:</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" id="starting-area-buffer" checked> Buffer</label>
+                            <label><input type="checkbox" id="allow-same-starting-color"> Allow same color</label>
+                        </div>
+                    </div>
                 </div>
-                <div class="setup-group">
-                    <label for="color-count">Colors:</label>
-                    <input type="number" id="color-count" value="6" min="3" max="10">
+
+                <h4>Players</h4>
+                <div id="player-setup-list">
+                    <!-- Dynamic player rows -->
                 </div>
-                <div class="setup-group">
-                    <label for="color-restrictions">Restrictions:</label>
-                    <select id="color-restrictions">
-                        <option value="notOwnColor">Not Own Color</option>
-                        <option value="notAnyPlayerColor" selected>Not Any Player Color</option>
-                        <option value="notAdjacentEnemyColor">Not Adjacent Enemy Color</option>
-                    </select>
-                </div>
+                <button id="add-player-button">+ Add Player</button>
+
                 <button id="start-button">Start Game</button>
             </div>
             <div id="controls-panel" style="display: none;">
+                <div id="autoplay-controls">
+                    <button id="play-pause-button">Play</button>
+                    <button id="step-button">Step</button>
+                    <label for="speed-slider">Speed:</label>
+                    <input type="range" id="speed-slider" min="0" max="1000" step="50" value="500">
+                </div>
                 <div id="color-buttons"></div>
                 <button id="reset-button">Back to Setup</button>
             </div>
