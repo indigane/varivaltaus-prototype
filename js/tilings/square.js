@@ -34,6 +34,13 @@ export function generateSquareBoard(options) {
     }
   }
 
+  const startTileIds = [
+    0, // Top-left
+    rows * cols - 1, // Bottom-right
+    cols - 1, // Top-right
+    (rows - 1) * cols // Bottom-left
+  ];
+
   return {
     version: 1,
     generator: "square",
@@ -41,6 +48,7 @@ export function generateSquareBoard(options) {
     height: rows * tileSize,
     cols,
     rows,
-    tiles
+    tiles,
+    startTileIds
   };
 }

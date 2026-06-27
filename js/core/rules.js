@@ -18,12 +18,38 @@ export function isLegalMove(state, playerId, colorId) {
   const player = state.players[playerId];
   if (!player.alive) return false;
 
-  // Simple notOwnColor rule: cannot pick the color the player already has
-  // In our simplified prototype, all player's tiles have the same color.
-  // We can find any tile owned by the player to check its color.
-  const ownedTile = state.board.tiles.find(t => t.ownerId === playerId);
-  if (ownedTile && ownedTile.colorId === colorId) {
-    return false;
+  const rules = state.rules;
+  const playerTiles = state.board.tiles.filter(t => t.ownerId === playerId);
+  if (playerTiles.length === 0) return true; // Should not happen if alive
+
+  const currentColorId = playerTiles[0].colorId;
+
+  if (rules.colorRestrictions === "notOwnColor") {
+    return colorId !== currentColorId;
+  }
+
+  if (rules.colorRestrictions === "notAnyPlayerColor") {
+    for (const tile of state.board.tiles) {
+      if (tile.ownerId !== null && tile.colorId === colorId) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (rules.colorRestrictions === "notAdjacentEnemyColor") {
+    if (colorId === currentColorId) return false;
+
+    // Check neighbors of all owned tiles
+    for (const tile of playerTiles) {
+      for (const neighborId of tile.neighbors) {
+        const neighbor = state.board.tiles[neighborId];
+        if (neighbor.ownerId !== null && neighbor.ownerId !== playerId && neighbor.colorId === colorId) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   return true;
