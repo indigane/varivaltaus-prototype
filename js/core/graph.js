@@ -23,7 +23,14 @@ export function validateBoardGraph(board) {
 
       // Symmetric check
       const neighbor = board.tiles[neighborId];
-      if (!neighbor.neighbors.includes(tile.id)) return false;
+      if (!neighbor) {
+        console.error(`Neighbor ${neighborId} of tile ${tile.id} not found`);
+        return false;
+      }
+      if (!neighbor.neighbors.includes(tile.id)) {
+        console.error(`Symmetry failed: Tile ${tile.id} has neighbor ${neighborId}, but ${neighborId} does not have ${tile.id}`);
+        return false;
+      }
 
       if (neighborId === tile.id) return false; // Self-neighbor
     }

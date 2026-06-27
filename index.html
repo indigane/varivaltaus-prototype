@@ -23,6 +23,24 @@
                 <h3>New Game</h3>
                 <div class="setup-grid">
                     <div class="setup-group">
+                        <label for="board-type">Board Type:</label>
+                        <select id="board-type">
+                            <option value="square">Square</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="hex">Hex</option>
+                            <option value="pentagon">Pentagon</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
+                        <label for="board-shape">Shape:</label>
+                        <select id="board-shape">
+                            <option value="rectangular">Rectangular</option>
+                            <option value="triangular">Triangular (Tri only)</option>
+                            <option value="hexagonal">Hexagonal (Hex only)</option>
+                            <option value="circular">Circular Mask</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
                         <label for="color-count">Colors:</label>
                         <input type="number" id="color-count" value="6" min="3" max="10">
                     </div>

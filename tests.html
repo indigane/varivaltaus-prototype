@@ -10,8 +10,10 @@
     <script type="module">
         import { runGameTests } from './js/tests/game-tests.js';
         import { runBotTests } from './js/tests/bot-tests.js';
+        import { runTilingTests } from './js/tests/tiling-tests.js';
         runGameTests();
         runBotTests();
+        runTilingTests();
         const resultsDiv = document.getElementById('test-results');
         resultsDiv.innerHTML = "Tests completed. Check console.";
     </script>
