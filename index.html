@@ -28,7 +28,8 @@
                             <option value="square">Square</option>
                             <option value="triangle">Triangle</option>
                             <option value="hex">Hex</option>
-                            <option value="pentagon">Pentagon</option>
+                            <option value="pentagon-cairo">Pentagon (Cairo)</option>
+                            <option value="pentagon-prismatic">Pentagon (Prismatic)</option>
                         </select>
                     </div>
                     <div class="setup-group">
@@ -43,6 +44,18 @@
                     <div class="setup-group">
                         <label for="color-count">Colors:</label>
                         <input type="number" id="color-count" value="6" min="3" max="10">
+                    </div>
+                    <div class="setup-group">
+                        <label for="board-cols">Cols / Size:</label>
+                        <input type="number" id="board-cols" value="20" min="5" max="100">
+                    </div>
+                    <div class="setup-group">
+                        <label for="board-rows">Rows:</label>
+                        <input type="number" id="board-rows" value="20" min="5" max="100">
+                    </div>
+                    <div class="setup-group">
+                        <label for="tile-size">Tile Size:</label>
+                        <input type="number" id="tile-size" value="25" min="5" max="100">
                     </div>
                     <div class="setup-group">
                         <label for="color-restrictions">Restrictions:</label>

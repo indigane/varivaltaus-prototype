@@ -14,8 +14,31 @@ export function findFairStartTileIds(board, playerCount) {
 
     const selectedIds = [];
 
-    // Start with the first tile or a corner-like tile if possible
-    selectedIds.push(board.tiles[0].id);
+    if (playerCount === 2) {
+        // For exactly 2 players, find the absolute diameter of the graph
+        // This ensures they are as far apart as possible (e.g. opposite corners)
+        let maxDist = -1;
+        let bestPair = [0, board.tiles.length - 1];
+
+        // We can optimize this by only checking "boundary" tiles if we had them,
+        // but for now, we'll sample some tiles to keep it fast if the board is huge.
+        const sampleSize = Math.min(board.tiles.length, 100);
+        const step = Math.max(1, Math.floor(board.tiles.length / sampleSize));
+
+        for (let i = 0; i < board.tiles.length; i += step) {
+            const dMap = computeDistances(board, i);
+            for (let j = 0; j < board.tiles.length; j += step) {
+                if (dMap[j] > maxDist) {
+                    maxDist = dMap[j];
+                    bestPair = [i, j];
+                }
+            }
+        }
+        selectedIds.push(...bestPair);
+    } else {
+        // Start with the first tile
+        selectedIds.push(board.tiles[0].id);
+    }
 
     while (selectedIds.length < playerCount) {
         let bestTileId = -1;

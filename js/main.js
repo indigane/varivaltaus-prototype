@@ -2,7 +2,7 @@ import { createRNG } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
 import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
-import { generatePentagonBoard } from './tilings/pentagon.js';
+import { generateCairoPentagonBoard, generatePrismaticPentagonBoard } from './tilings/pentagon.js';
 import { applyMask, circularMask } from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
 import { createGame, applyMove } from './core/game.js';
@@ -38,6 +38,9 @@ function init() {
 function handleStart() {
     const boardType = document.getElementById('board-type').value;
     const boardShape = document.getElementById('board-shape').value;
+    const cols = parseInt(document.getElementById('board-cols').value);
+    const rows = parseInt(document.getElementById('board-rows').value);
+    const tileSize = parseInt(document.getElementById('tile-size').value);
     const colorCount = parseInt(document.getElementById('color-count').value);
     const colorRestrictions = document.getElementById('color-restrictions').value;
     const teamTerritory = document.getElementById('team-territory').value;
@@ -52,13 +55,17 @@ function handleStart() {
     const commonOptions = { colorCount, rng };
 
     if (boardType === 'square') {
-        board = generateSquareBoard({ ...commonOptions, cols: 20, rows: 20, tileSize: 25 });
+        board = generateSquareBoard({ ...commonOptions, cols, rows, tileSize });
     } else if (boardType === 'triangle') {
-        board = generateTriangleBoard({ ...commonOptions, cols: 30, rows: 20, tileSize: 30, shape: boardShape === 'triangular' ? 'triangular' : 'rectangular' });
+        // Adjust columns for triangles to roughly match square aspect ratio
+        const adjCols = boardShape === 'triangular' ? cols : Math.floor(cols * 1.5);
+        board = generateTriangleBoard({ ...commonOptions, cols: adjCols, rows, tileSize: tileSize * 1.2, shape: boardShape === 'triangular' ? 'triangular' : 'rectangular' });
     } else if (boardType === 'hex') {
-        board = generateHexBoard({ ...commonOptions, cols: 15, rows: 15, tileSize: 15, shape: boardShape === 'hexagonal' ? 'hexagonal' : 'rectangular' });
-    } else if (boardType === 'pentagon') {
-        board = generatePentagonBoard({ ...commonOptions, cols: 15, rows: 15, tileSize: 25 });
+        board = generateHexBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6, shape: boardShape === 'hexagonal' ? 'hexagonal' : 'rectangular' });
+    } else if (boardType === 'pentagon-cairo') {
+        board = generateCairoPentagonBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.5 });
+    } else if (boardType === 'pentagon-prismatic') {
+        board = generatePrismaticPentagonBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.5 });
     }
 
     if (boardShape === 'circular') {

@@ -2,7 +2,7 @@ import { validateBoardGraph } from '../core/graph.js';
 import { generateSquareBoard } from '../tilings/square.js';
 import { generateTriangleBoard } from '../tilings/triangle.js';
 import { generateHexBoard } from '../tilings/hex.js';
-import { generatePentagonBoard } from '../tilings/pentagon.js';
+import { generateCairoPentagonBoard, generatePrismaticPentagonBoard } from '../tilings/pentagon.js';
 import { createRNG } from '../core/rng.js';
 
 export function runTilingTests() {
@@ -16,7 +16,8 @@ export function runTilingTests() {
     testGenerator("Triangle Tri", () => generateTriangleBoard({ ...options, shape: "triangular" }));
     testGenerator("Hex Rect", () => generateHexBoard({ ...options, shape: "rectangular" }));
     testGenerator("Hex Hex", () => generateHexBoard({ ...options, shape: "hexagonal" }));
-    testGenerator("Pentagon", () => generatePentagonBoard(options));
+    testGenerator("Pentagon Cairo", () => generateCairoPentagonBoard(options));
+    testGenerator("Pentagon Prismatic", () => generatePrismaticPentagonBoard(options));
 
     console.log("Tiling Tests Completed.");
 }
