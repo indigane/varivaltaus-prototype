@@ -33,7 +33,19 @@ export function runCairoTests() {
 
         // Check polygon
         console.assert(tile.points.length === 5, `Tile ${tile.id} is not a pentagon, has ${tile.points.length} points`);
+
+        // 3. Check bounds
+        tile.points.forEach(p => {
+            console.assert(p[0] >= -0.0001 && p[0] <= board.width + 0.0001, `Tile ${tile.id} point X out of bounds: ${p[0]} (width: ${board.width})`);
+            console.assert(p[1] >= -0.0001 && p[1] <= board.height + 0.0001, `Tile ${tile.id} point Y out of bounds: ${p[1]} (height: ${board.height})`);
+        });
     });
+
+    // 4. Check that at least one point is near 0 on each axis (due to offset)
+    const allX = board.tiles.flatMap(t => t.points.map(p => p[0]));
+    const allY = board.tiles.flatMap(t => t.points.map(p => p[1]));
+    console.assert(Math.min(...allX) < 0.0001, "No tile point at X=0");
+    console.assert(Math.min(...allY) < 0.0001, "No tile point at Y=0");
 
     console.log(`Cairo Tests Finished. Disconnected tiles: ${disconnectedTiles}`);
 }

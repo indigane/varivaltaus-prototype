@@ -195,9 +195,7 @@ function startAutoplay() {
 
     const currentPlayer = gameState.players[gameState.currentPlayerId];
     if (currentPlayer.control === 'human') {
-        isPlaying = false;
-        const btn = document.getElementById('play-pause-button');
-        btn.textContent = 'Play';
+        // Wait for human input; don't disable autoplay
         return;
     }
 
