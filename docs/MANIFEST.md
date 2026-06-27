@@ -1,0 +1,45 @@
+# Manifest
+
+Files included in this package:
+
+- `00_ALWAYS_LOAD.md`
+- `01_CONTEXT_ROUTER.md`
+- `README.md`
+- `architecture/engine-overview.md`
+- `architecture/game-state.md`
+- `architecture/graph-format.md`
+- `architecture/move-algorithm.md`
+- `architecture/rules.md`
+- `architecture/scoring-and-win.md`
+- `architecture/serialization.md`
+- `bots/greedy.md`
+- `bots/lookahead.md`
+- `bots/overview.md`
+- `bots/random.md`
+- `decisions/architecture-decisions.md`
+- `milestones/milestone-1-square-solo.md`
+- `milestones/milestone-2-graph-engine.md`
+- `milestones/milestone-3-hotseat-multiplayer.md`
+- `milestones/milestone-4-teams-and-bots.md`
+- `milestones/milestone-5-multiple-tilings.md`
+- `milestones/milestone-6-mobile-tablet-pass.md`
+- `milestones/overview.md`
+- `tasks/agent-task-template.md`
+- `tasks/example-agent-prompts.md`
+- `testing/bot-tests.md`
+- `testing/game-logic-tests.md`
+- `testing/serialization-tests.md`
+- `testing/tiling-tests.md`
+- `tilings/custom-json.md`
+- `tilings/hex.md`
+- `tilings/masks.md`
+- `tilings/overview.md`
+- `tilings/pentagon-cairo.md`
+- `tilings/square.md`
+- `tilings/triangle.md`
+- `ui/canvas-renderer.md`
+- `ui/input.md`
+- `ui/mobile-tablet-pass.md`
+- `ui/palettes.md`
+- `ui/panels.md`
+- `ui/replay.md`
