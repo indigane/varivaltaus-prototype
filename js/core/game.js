@@ -29,17 +29,70 @@ export function createGame(config) {
 
   // Assign initial ownership based on starting positions
   if (state.players.length > 0) {
+    const usedColors = new Set();
+
     state.players.forEach((player, index) => {
       const startTileId = state.board.startTileIds[index % state.board.startTileIds.length];
       const startTile = state.board.tiles[startTileId];
 
       // Ensure starting tiles don't overlap if possible
       if (startTile.ownerId === null) {
+        // Enforce color uniqueness if required
+        if (!state.rules.allowSameStartingColor) {
+          let attempts = 0;
+          while (usedColors.has(startTile.colorId) && attempts < state.colorCount) {
+            startTile.colorId = (startTile.colorId + 1) % state.colorCount;
+            attempts++;
+          }
+          usedColors.add(startTile.colorId);
+        }
+
         startTile.ownerId = player.id;
+
+        // Expand starting area
+        if (state.rules.startingAreaSize > 1) {
+          const queue = [startTileId];
+          const visited = new Set([startTileId]);
+          let ownedCount = 1;
+
+          while (queue.length > 0 && ownedCount < state.rules.startingAreaSize) {
+            const tileId = queue.shift();
+            const tile = state.board.tiles[tileId];
+
+            for (const neighborId of tile.neighbors) {
+              if (visited.has(neighborId)) continue;
+              visited.add(neighborId);
+
+              const neighbor = state.board.tiles[neighborId];
+              if (neighbor.ownerId === null) {
+                neighbor.ownerId = player.id;
+                neighbor.colorId = startTile.colorId;
+                ownedCount++;
+                queue.push(neighborId);
+                if (ownedCount >= state.rules.startingAreaSize) break;
+              }
+            }
+          }
+        }
+
         // Initial flood to capture same-colored adjacent tiles
         floodCapture(state, player.id, startTile.colorId);
       }
     });
+
+    // Apply starting area buffer: neighbors of owned tiles should not have the same color
+    if (state.rules.startingAreaBuffer) {
+      for (const tile of state.board.tiles) {
+        if (tile.ownerId !== null) {
+          for (const neighborId of tile.neighbors) {
+            const neighbor = state.board.tiles[neighborId];
+            if (neighbor.ownerId === null && neighbor.colorId === tile.colorId) {
+              neighbor.colorId = (neighbor.colorId + 1) % state.colorCount;
+            }
+          }
+        }
+      }
+    }
   }
 
   // Initial scores
@@ -133,10 +186,16 @@ function floodCapture(state, playerId, colorId) {
   const queue = [];
   const visited = new Set();
   const captured = [];
+  const player = state.players[playerId];
 
   // 1. Recolor existing territory and use it as BFS start
   for (const tile of state.board.tiles) {
-    if (tile.ownerId === playerId) {
+    const isOwner = tile.ownerId === playerId;
+    const isTeammateMerged = state.rules.teamTerritory === "merged" &&
+                             tile.ownerId !== null &&
+                             state.players[tile.ownerId].teamId === player.teamId;
+
+    if (isOwner || isTeammateMerged) {
       tile.colorId = colorId;
       queue.push(tile.id);
       visited.add(tile.id);

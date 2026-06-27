@@ -2,11 +2,14 @@ export function defaultRules() {
   return {
     winCondition: "mostTiles",
     turnOrder: "players",
-    teamTerritory: "separatePlayers",
+    teamTerritory: "separatePlayers", // "separatePlayers" or "merged"
     captureMode: "neutralOnly",
     colorRestrictions: "notOwnColor",
     startingPositions: "corners",
-    maxTurns: 25
+    maxTurns: 100,
+    startingAreaSize: 1,
+    startingAreaBuffer: true,
+    allowSameStartingColor: false
   };
 }
 
@@ -58,15 +61,26 @@ export function isLegalMove(state, playerId, colorId) {
 export function canCaptureTile(state, playerId, tileId) {
   const tile = state.board.tiles[tileId];
   const rules = state.rules;
+  const player = state.players[playerId];
 
   if (tile.ownerId !== null) {
+    // If team territory is merged, you already "own" teammates' tiles logically
+    // but the engine might still track individual ownership for scoring.
+    // However, floodCapture should treat teammates as already captured.
+    if (rules.teamTerritory === "merged") {
+      const tileOwner = state.players[tile.ownerId];
+      if (tileOwner.teamId === player.teamId) {
+        return false; // Already "yours" through team
+      }
+    }
+
     if (rules.captureMode === "canCaptureEnemies") {
-      // Cannot capture own tiles (already owned)
       if (tile.ownerId === playerId) return false;
 
-      // In team games, maybe cannot capture teammates?
-      // For now, assume separatePlayers means you can't capture anyone's tiles
-      // unless specifically enabled.
+      // Cannot capture teammates
+      const tileOwner = state.players[tile.ownerId];
+      if (tileOwner.teamId === player.teamId) return false;
+
       return true;
     }
     return false;

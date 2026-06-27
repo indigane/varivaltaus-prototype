@@ -9,7 +9,9 @@
     <div id="test-results">Open console to see test results.</div>
     <script type="module">
         import { runGameTests } from './js/tests/game-tests.js';
+        import { runBotTests } from './js/tests/bot-tests.js';
         runGameTests();
+        runBotTests();
         const resultsDiv = document.getElementById('test-results');
         resultsDiv.innerHTML = "Tests completed. Check console.";
     </script>
