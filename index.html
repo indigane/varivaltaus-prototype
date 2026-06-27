@@ -23,8 +23,38 @@
                 <h3>New Game</h3>
                 <div class="setup-grid">
                     <div class="setup-group">
+                        <label for="board-type">Board Type:</label>
+                        <select id="board-type">
+                            <option value="square">Square</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="hex">Hex</option>
+                            <option value="pentagon-cairo">Pentagon (Cairo)</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
+                        <label for="board-shape">Shape:</label>
+                        <select id="board-shape">
+                            <option value="rectangular">Rectangular</option>
+                            <option value="triangular">Triangular (Tri only)</option>
+                            <option value="hexagonal">Hexagonal (Hex only)</option>
+                            <option value="circular">Circular Mask</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
                         <label for="color-count">Colors:</label>
                         <input type="number" id="color-count" value="6" min="3" max="10">
+                    </div>
+                    <div class="setup-group">
+                        <label for="board-cols">Cols / Size:</label>
+                        <input type="number" id="board-cols" value="20" min="5" max="100">
+                    </div>
+                    <div class="setup-group">
+                        <label for="board-rows">Rows:</label>
+                        <input type="number" id="board-rows" value="20" min="5" max="100">
+                    </div>
+                    <div class="setup-group">
+                        <label for="tile-size">Tile Size:</label>
+                        <input type="number" id="tile-size" value="25" min="5" max="100">
                     </div>
                     <div class="setup-group">
                         <label for="color-restrictions">Restrictions:</label>

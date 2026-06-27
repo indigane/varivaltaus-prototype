@@ -1,5 +1,10 @@
 import { createRNG } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
+import { generateTriangleBoard } from './tilings/triangle.js';
+import { generateHexBoard } from './tilings/hex.js';
+import { generateCairoPentagonBoard } from './tilings/pentagon.js';
+import { applyMask, circularMask } from './tilings/masks.js';
+import { findFairStartTileIds } from './core/fair-starts.js';
 import { createGame, applyMove } from './core/game.js';
 import { CanvasRenderer } from './ui/canvas-renderer.js';
 import { setupUI, updateStats, getPlayerConfigs } from './ui/input.js';
@@ -31,6 +36,11 @@ function init() {
 }
 
 function handleStart() {
+    const boardType = document.getElementById('board-type').value;
+    const boardShape = document.getElementById('board-shape').value;
+    const cols = parseInt(document.getElementById('board-cols').value);
+    const rows = parseInt(document.getElementById('board-rows').value);
+    const tileSize = parseInt(document.getElementById('tile-size').value);
     const colorCount = parseInt(document.getElementById('color-count').value);
     const colorRestrictions = document.getElementById('color-restrictions').value;
     const teamTerritory = document.getElementById('team-territory').value;
@@ -41,15 +51,31 @@ function handleStart() {
     const seed = Math.floor(Math.random() * 1000000);
     const rng = createRNG(seed);
 
-    const board = generateSquareBoard({
-        cols: 20,
-        rows: 20,
-        tileSize: 20,
-        colorCount,
-        rng
-    });
+    let board;
+    const commonOptions = { colorCount, rng };
+
+    if (boardType === 'square') {
+        board = generateSquareBoard({ ...commonOptions, cols, rows, tileSize });
+    } else if (boardType === 'triangle') {
+        // Adjust columns for triangles to roughly match square aspect ratio
+        const adjCols = boardShape === 'triangular' ? cols : Math.floor(cols * 1.5);
+        board = generateTriangleBoard({ ...commonOptions, cols: adjCols, rows, tileSize: tileSize * 1.2, shape: boardShape === 'triangular' ? 'triangular' : 'rectangular' });
+    } else if (boardType === 'hex') {
+        board = generateHexBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6, shape: boardShape === 'hexagonal' ? 'hexagonal' : 'rectangular' });
+    } else if (boardType === 'pentagon-cairo') {
+        board = generateCairoPentagonBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.5 });
+    }
+
+    if (boardShape === 'circular') {
+        const cx = board.width / 2;
+        const cy = board.height / 2;
+        const radius = Math.min(board.width, board.height) * 0.4;
+        board = applyMask(board, circularMask(cx, cy, radius));
+    }
 
     const configs = getPlayerConfigs();
+    board.startTileIds = findFairStartTileIds(board, configs.length);
+
     const players = configs.map((c, i) => ({
         id: i,
         name: c.name,
