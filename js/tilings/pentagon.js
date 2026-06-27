@@ -1,145 +1,149 @@
 /**
- * Provides various pentagonal tilings.
+ * Cairo Pentagon Tiling
+ *
+ * This implementation uses the 2-pentagons-per-square construction.
+ * Each square in a grid is either "Vertical" or "Horizontal" in a checkerboard pattern.
+ * Each square is divided into 2 pentagons by its internal segment and connections to grid corners.
  */
 
-export function generateCairoPentagonBoard(options) {
-    return generatePentagonBoardByEdges(options, "cairo");
-}
+export function generateCairoPentagonBoard({ colorCount, rng, cols, rows, tileSize }) {
+    const tiles = [];
+    const size = tileSize;
+    const hSize = size / 2;
+    const offset = size * 0.2; // Adjust for aesthetic "basketweave" look
 
-export function generatePrismaticPentagonBoard(options) {
-    return generatePentagonBoardByEdges(options, "prismatic");
-}
+    // Helper to get internal points for any square
+    const getP1 = (gx, gy) => {
+        const x = gx * size;
+        const y = gy * size;
+        if ((gx + gy) % 2 === 0) return [x + hSize, y + offset]; // V-top
+        return [x + offset, y + hSize]; // H-left
+    };
+    const getP2 = (gx, gy) => {
+        const x = gx * size;
+        const y = gy * size;
+        if ((gx + gy) % 2 === 0) return [x + hSize, y + size - offset]; // V-bottom
+        return [x + size - offset, y + hSize]; // H-right
+    };
+    const getCorner = (gx, gy) => [gx * size, gy * size];
 
-/**
- * Pentagonal tilings implemented via a grid of split cells.
- */
-export function generatePentagonBoardByEdges(options, type) {
-    const { cols, rows, tileSize: s, colorCount, rng } = options;
-    const rawTiles = [];
-    const m = s / 2;
+    const addTile = (points, gx, gy, subId) => {
+        const id = (gy * cols + gx) * 2 + subId;
+        const colorId = Math.floor(rng() * colorCount);
 
-    if (type === "cairo") {
-        // Cairo tiling: each square is split into 4 pentagons.
-        // We shift the edge midpoints to create the characteristic pattern.
-        // To ensure perfect interlocking, the shift must be consistent for shared edges.
-        const d = s * 0.15;
+        tiles.push({
+            id,
+            colorId,
+            ownerId: null,
+            neighbors: [],
+            points: points.map(p => [p[0], p[1]]),
+            gx, gy, subId
+        });
+    };
 
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const x = c * s;
-                const y = r * s;
+    // 1. Generate all tiles
+    for (let gy = 0; gy < rows; gy++) {
+        for (let gx = 0; gx < cols; gx++) {
+            const isV = (gx + gy) % 2 === 0;
+            const p1 = getP1(gx, gy);
+            const p2 = getP2(gx, gy);
 
-                // Shift for horizontal edges (Top/Bottom) depends on the row index
-                const shiftT = ((r % 2 === 0) ? d : -d);
-                const shiftB = (((r + 1) % 2 === 0) ? d : -d);
-
-                // Shift for vertical edges (Left/Right) depends on the column index
-                const shiftL = ((c % 2 === 0) ? d : -d);
-                const shiftR = (((c + 1) % 2 === 0) ? d : -d);
-
-                const pTL = [x, y], pTR = [x + s, y], pBL = [x, y + s], pBR = [x + s, y + s];
-                const pT = [x + m + shiftT, y];
-                const pB = [x + m + shiftB, y + s];
-                const pL = [x, y + m + shiftL];
-                const pR = [x + s, y + m + shiftR];
-                const pC = [x + m, y + m];
-
-                // 4 pentagons per square
-                rawTiles.push({ points: [pTL, pT, pC, pL] });
-                rawTiles.push({ points: [pTR, pT, pC, pR] });
-                rawTiles.push({ points: [pBR, pB, pC, pR] });
-                rawTiles.push({ points: [pBL, pB, pC, pL] });
-            }
-        }
-    } else {
-        // Prismatic (Type 1): Split hexagonal grid.
-        // Guaranteed to be gapless and overlap-free.
-        const w = Math.sqrt(3) * s;
-        const h = s * 1.5;
-
-        for (let r = -1; r < rows + 1; r++) {
-            const offset = (r % 2) * (w / 2);
-            for (let c = -1; c < cols + 1; c++) {
-                const cx = c * w + offset;
-                const cy = r * h;
-
-                const p0 = [cx, cy - s];
-                const p1 = [cx + w / 2, cy - s / 2];
-                const p2 = [cx + w / 2, cy + s / 2];
-                const p3 = [cx, cy + s];
-                const p4 = [cx - w / 2, cy + s / 2];
-                const p5 = [cx - w / 2, cy - s / 2];
-                const center = [cx, cy];
-
-                rawTiles.push({ points: [p0, p1, p2, p3, center] });
-                rawTiles.push({ points: [p0, p5, p4, p3, center] });
+            if (isV) {
+                // Left Pentagon
+                addTile([
+                    p1,
+                    getCorner(gx, gy),
+                    getP2(gx - 1, gy), // Shares with H-square Left
+                    getCorner(gx, gy + 1),
+                    p2
+                ], gx, gy, 0);
+                // Right Pentagon
+                addTile([
+                    p1,
+                    getCorner(gx + 1, gy),
+                    getP1(gx + 1, gy), // Shares with H-square Right
+                    getCorner(gx + 1, gy + 1),
+                    p2
+                ], gx, gy, 1);
+            } else {
+                // Top Pentagon
+                addTile([
+                    p1,
+                    getCorner(gx, gy),
+                    getP2(gx, gy - 1), // Shares with V-square Above
+                    getCorner(gx + 1, gy),
+                    p2
+                ], gx, gy, 0);
+                // Bottom Pentagon
+                addTile([
+                    p1,
+                    getCorner(gx, gy + 1),
+                    getP1(gx, gy + 1), // Shares with V-square Below
+                    getCorner(gx + 1, gy + 1),
+                    p2
+                ], gx, gy, 1);
             }
         }
     }
 
-    // Determine bounds
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
-    for (const t of rawTiles) {
-        for (const p of t.points) {
-            minX = Math.min(minX, p[0]);
-            minY = Math.min(minY, p[1]);
-            maxX = Math.max(maxX, p[0]);
-            maxY = Math.max(maxY, p[1]);
-        }
-    }
+    // 2. Establish neighbors
+    const tileMap = new Map();
+    tiles.forEach(t => tileMap.set(`${t.gx},${t.gy},${t.subId}`, t));
 
-    const tiles = rawTiles.map((t, i) => ({
-        id: i,
-        colorId: Math.floor(rng() * colorCount),
-        ownerId: null,
-        points: t.points.map(p => [p[0] - minX, p[1] - minY]),
-        neighbors: []
-    }));
+    tiles.forEach(t => {
+        const { gx, gy, subId } = t;
+        const isV = (gx + gy) % 2 === 0;
+        let potential = [];
 
-    // Neighbor detection using edge midpoints
-    const edgeMap = new Map();
-    const quantize = (v) => Math.round(v * 100) / 100;
-
-    tiles.forEach(tile => {
-        for (let i = 0; i < tile.points.length; i++) {
-            const p1 = tile.points[i];
-            const p2 = tile.points[(i + 1) % tile.points.length];
-            const x1 = quantize(p1[0]), y1 = quantize(p1[1]);
-            const x2 = quantize(p2[0]), y2 = quantize(p2[1]);
-
-            const key = x1 < x2 || (x1 === x2 && y1 < y2)
-                ? `${x1},${y1}_${x2},${y2}`
-                : `${x2},${y2}_${x1},${y1}`;
-
-            if (!edgeMap.has(key)) edgeMap.set(key, []);
-            edgeMap.get(key).push(tile.id);
-        }
-    });
-
-    edgeMap.forEach(tileIds => {
-        if (tileIds.length >= 2) {
-            for (let i = 0; i < tileIds.length; i++) {
-                for (let j = i + 1; j < tileIds.length; j++) {
-                    const id1 = tileIds[i];
-                    const id2 = tileIds[j];
-                    if (!tiles[id1].neighbors.includes(id2)) tiles[id1].neighbors.push(id2);
-                    if (!tiles[id2].neighbors.includes(id1)) tiles[id2].neighbors.push(id1);
-                }
+        if (isV) {
+            if (subId === 0) { // Left
+                potential = [
+                    [gx, gy, 1], // Same square Right
+                    [gx - 1, gy, 0], // H-square Left, Top
+                    [gx - 1, gy, 1], // H-square Left, Bottom
+                    [gx, gy - 1, 1], // H-square Above, Bottom
+                    [gx, gy + 1, 0]  // H-square Below, Top
+                ];
+            } else { // Right
+                potential = [
+                    [gx, gy, 0], // Same square Left
+                    [gx + 1, gy, 0], // H-square Right, Top
+                    [gx + 1, gy, 1], // H-square Right, Bottom
+                    [gx, gy - 1, 1], // H-square Above, Bottom
+                    [gx, gy + 1, 0]  // H-square Below, Top
+                ];
+            }
+        } else {
+            if (subId === 0) { // Top
+                potential = [
+                    [gx, gy, 1], // Same square Bottom
+                    [gx, gy - 1, 0], // V-square Above, Left
+                    [gx, gy - 1, 1], // V-square Above, Right
+                    [gx - 1, gy, 1], // V-square Left, Right
+                    [gx + 1, gy, 0]  // V-square Right, Left
+                ];
+            } else { // Bottom
+                potential = [
+                    [gx, gy, 0], // Same square Top
+                    [gx, gy + 1, 0], // V-square Below, Left
+                    [gx, gy + 1, 1], // V-square Below, Right
+                    [gx - 1, gy, 1], // V-square Left, Right
+                    [gx + 1, gy, 0]  // V-square Right, Left
+                ];
             }
         }
+
+        potential.forEach(([nx, ny, ns]) => {
+            const neighbor = tileMap.get(`${nx},${ny},${ns}`);
+            if (neighbor) {
+                t.neighbors.push(neighbor.id);
+            }
+        });
     });
 
     return {
-        version: 1,
-        generator: `pentagon-${type}`,
-        width: Math.max(1, maxX - minX),
-        height: Math.max(1, maxY - minY),
         tiles,
-        startTileIds: [0, tiles.length - 1]
+        width: cols * size,
+        height: rows * size
     };
-}
-
-export function generatePentagonBoard(options) {
-    return generateCairoPentagonBoard(options);
 }

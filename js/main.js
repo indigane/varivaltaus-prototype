@@ -2,7 +2,7 @@ import { createRNG } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
 import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
-import { generateCairoPentagonBoard, generatePrismaticPentagonBoard } from './tilings/pentagon.js';
+import { generateCairoPentagonBoard } from './tilings/pentagon.js';
 import { applyMask, circularMask } from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
 import { createGame, applyMove } from './core/game.js';
@@ -64,8 +64,6 @@ function handleStart() {
         board = generateHexBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6, shape: boardShape === 'hexagonal' ? 'hexagonal' : 'rectangular' });
     } else if (boardType === 'pentagon-cairo') {
         board = generateCairoPentagonBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.5 });
-    } else if (boardType === 'pentagon-prismatic') {
-        board = generatePrismaticPentagonBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.5 });
     }
 
     if (boardShape === 'circular') {
