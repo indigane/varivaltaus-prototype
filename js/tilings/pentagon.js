@@ -11,10 +11,7 @@ export function generatePrismaticPentagonBoard(options) {
 }
 
 /**
- * Cairo pentagonal tiling is a dual of the snub square tiling.
- * We implement it using a square grid where each cell is divided into 2 pentagons,
- * alternating orientation in a checkerboard pattern.
- * Midpoints are added to all edges to ensure perfect tiling and neighbor detection.
+ * Pentagonal tilings implemented via a grid of split cells.
  */
 export function generatePentagonBoardByEdges(options, type) {
     const { cols, rows, tileSize: s, colorCount, rng } = options;
@@ -22,85 +19,65 @@ export function generatePentagonBoardByEdges(options, type) {
     const m = s / 2;
 
     if (type === "cairo") {
-        const d = 0.2 * s; // Depth of the "V" division
+        // Cairo tiling: each square is split into 4 pentagons.
+        // We shift the edge midpoints to create the characteristic pattern.
+        // To ensure perfect interlocking, the shift must be consistent for shared edges.
+        const d = s * 0.15;
+
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const x = c * s;
                 const y = r * s;
 
-                if ((r + c) % 2 === 0) {
-                    // Horizontal division (Top and Bottom)
-                    rawTiles.push({
-                        points: [
-                            [x, y], [x + m, y], [x + s, y],      // Top edge
-                            [x + s, y + m],                     // Right midpoint
-                            [x + m, y + m - d],                // Peak
-                            [x, y + m]                          // Left midpoint
-                        ]
-                    });
-                    rawTiles.push({
-                        points: [
-                            [x, y + m], [x + m, y + m - d], [x + s, y + m], // Midline
-                            [x + s, y + s], [x + m, y + s], [x, y + s]      // Bottom edge
-                        ]
-                    });
-                } else {
-                    // Vertical division (Left and Right)
-                    rawTiles.push({
-                        points: [
-                            [x, y], [x + m, y],                 // Top midpoint
-                            [x + m - d, y + m],                // Peak
-                            [x + m, y + s], [x, y + s],         // Bottom midpoint
-                            [x, y + m], [x, y]                  // Left edge
-                        ]
-                    });
-                    rawTiles.push({
-                        points: [
-                            [x + m, y], [x + s, y], [x + s, y + m], [x + s, y + s], // Right edge
-                            [x + m, y + s],                     // Bottom midpoint
-                            [x + m - d, y + m]                 // Peak
-                        ]
-                    });
-                }
+                // Shift for horizontal edges (Top/Bottom) depends on the row index
+                const shiftT = ((r % 2 === 0) ? d : -d);
+                const shiftB = (((r + 1) % 2 === 0) ? d : -d);
+
+                // Shift for vertical edges (Left/Right) depends on the column index
+                const shiftL = ((c % 2 === 0) ? d : -d);
+                const shiftR = (((c + 1) % 2 === 0) ? d : -d);
+
+                const pTL = [x, y], pTR = [x + s, y], pBL = [x, y + s], pBR = [x + s, y + s];
+                const pT = [x + m + shiftT, y];
+                const pB = [x + m + shiftB, y + s];
+                const pL = [x, y + m + shiftL];
+                const pR = [x + s, y + m + shiftR];
+                const pC = [x + m, y + m];
+
+                // 4 pentagons per square
+                rawTiles.push({ points: [pTL, pT, pC, pL] });
+                rawTiles.push({ points: [pTR, pT, pC, pR] });
+                rawTiles.push({ points: [pBR, pB, pC, pR] });
+                rawTiles.push({ points: [pBL, pB, pC, pL] });
             }
         }
     } else {
-        // Prismatic (House) tiling: Interlocking
-        const h = s * 0.7; // height of the square part
-        const p = s * 0.3; // height of the peak
+        // Prismatic (Type 1): Split hexagonal grid.
+        // Guaranteed to be gapless and overlap-free.
+        const w = Math.sqrt(3) * s;
+        const h = s * 1.5;
 
-        for (let r = 0; r < rows; r++) {
-            const isOdd = r % 2 === 1;
-            const yBase = r * h;
-            for (let c = 0; c < cols; c++) {
-                const x = c * s + (isOdd ? s/2 : 0);
+        for (let r = -1; r < rows + 1; r++) {
+            const offset = (r % 2) * (w / 2);
+            for (let c = -1; c < cols + 1; c++) {
+                const cx = c * w + offset;
+                const cy = r * h;
 
-                if (!isOdd) {
-                    // Downward house
-                    rawTiles.push({
-                        points: [
-                            [x, yBase], [x + m, yBase], [x + s, yBase], // Top
-                            [x + s, yBase + m], [x + s, yBase + h],     // Right
-                            [x + m, yBase + h + p],                     // Peak
-                            [x, yBase + h], [x, yBase + m]              // Left
-                        ]
-                    });
-                } else {
-                    // Upward house
-                    rawTiles.push({
-                        points: [
-                            [x + m, yBase - p],                         // Peak
-                            [x + s, yBase], [x + s, yBase + m], [x + s, yBase + h], // Right
-                            [x + m, yBase + h], [x, yBase + h],         // Bottom
-                            [x, yBase + m], [x, yBase]                  // Left
-                        ]
-                    });
-                }
+                const p0 = [cx, cy - s];
+                const p1 = [cx + w / 2, cy - s / 2];
+                const p2 = [cx + w / 2, cy + s / 2];
+                const p3 = [cx, cy + s];
+                const p4 = [cx - w / 2, cy + s / 2];
+                const p5 = [cx - w / 2, cy - s / 2];
+                const center = [cx, cy];
+
+                rawTiles.push({ points: [p0, p1, p2, p3, center] });
+                rawTiles.push({ points: [p0, p5, p4, p3, center] });
             }
         }
     }
 
-    // Determine bounds to offset
+    // Determine bounds
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
     for (const t of rawTiles) {
@@ -120,7 +97,7 @@ export function generatePentagonBoardByEdges(options, type) {
         neighbors: []
     }));
 
-    // Shared edge neighbor detection
+    // Neighbor detection using edge midpoints
     const edgeMap = new Map();
     const quantize = (v) => Math.round(v * 100) / 100;
 
@@ -131,7 +108,6 @@ export function generatePentagonBoardByEdges(options, type) {
             const x1 = quantize(p1[0]), y1 = quantize(p1[1]);
             const x2 = quantize(p2[0]), y2 = quantize(p2[1]);
 
-            // Sort points to make the edge key stable
             const key = x1 < x2 || (x1 === x2 && y1 < y2)
                 ? `${x1},${y1}_${x2},${y2}`
                 : `${x2},${y2}_${x1},${y1}`;
@@ -157,8 +133,8 @@ export function generatePentagonBoardByEdges(options, type) {
     return {
         version: 1,
         generator: `pentagon-${type}`,
-        width: maxX - minX,
-        height: maxY - minY,
+        width: Math.max(1, maxX - minX),
+        height: Math.max(1, maxY - minY),
         tiles,
         startTileIds: [0, tiles.length - 1]
     };

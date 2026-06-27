@@ -11,9 +11,11 @@
         import { runGameTests } from './js/tests/game-tests.js';
         import { runBotTests } from './js/tests/bot-tests.js';
         import { runTilingTests } from './js/tests/tiling-tests.js';
+        import { runCustomMapTests } from './js/tests/custom-map-tests.js';
         runGameTests();
         runBotTests();
         runTilingTests();
+        runCustomMapTests();
         const resultsDiv = document.getElementById('test-results');
         resultsDiv.innerHTML = "Tests completed. Check console.";
     </script>

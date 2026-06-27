@@ -38,10 +38,6 @@ export function generateHexBoard(options) {
         const px = x + radius * Math.cos(angle_rad);
         const py = y + radius * Math.sin(angle_rad);
         points.push([px, py]);
-        minX = Math.min(minX, px);
-        minY = Math.min(minY, py);
-        maxX = Math.max(maxX, px);
-        maxY = Math.max(maxY, py);
       }
 
       const neighbors = [];
@@ -58,6 +54,15 @@ export function generateHexBoard(options) {
         points,
         neighbors
       });
+    }
+
+    for (const t of rawTiles) {
+      for (const p of t.points) {
+        minX = Math.min(minX, p[0]);
+        minY = Math.min(minY, p[1]);
+        maxX = Math.max(maxX, p[0]);
+        maxY = Math.max(maxY, p[1]);
+      }
     }
 
     // Apply offset
@@ -109,10 +114,6 @@ export function generateHexBoard(options) {
         const px = x + radius * Math.cos(angle_rad);
         const py = y + radius * Math.sin(angle_rad);
         points.push([px, py]);
-        minX = Math.min(minX, px);
-        minY = Math.min(minY, py);
-        maxX = Math.max(maxX, px);
-        maxY = Math.max(maxY, py);
       }
 
       const neighbors = [];
@@ -129,6 +130,15 @@ export function generateHexBoard(options) {
         points,
         neighbors
       });
+    }
+
+    for (const t of rawTiles) {
+      for (const p of t.points) {
+        minX = Math.min(minX, p[0]);
+        minY = Math.min(minY, p[1]);
+        maxX = Math.max(maxX, p[0]);
+        maxY = Math.max(maxY, p[1]);
+      }
     }
 
     // Apply offset
