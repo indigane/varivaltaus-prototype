@@ -141,9 +141,26 @@ export function generateCairoPentagonBoard({ colorCount, rng, cols, rows, tileSi
         });
     });
 
+    // 3. Determine actual bounds and apply offset to fix cropping
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+
+    for (const t of tiles) {
+        for (const p of t.points) {
+            minX = Math.min(minX, p[0]);
+            minY = Math.min(minY, p[1]);
+            maxX = Math.max(maxX, p[0]);
+            maxY = Math.max(maxY, p[1]);
+        }
+    }
+
+    tiles.forEach(t => {
+        t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
+    });
+
     return {
         tiles,
-        width: cols * size,
-        height: rows * size
+        width: maxX - minX,
+        height: maxY - minY
     };
 }
