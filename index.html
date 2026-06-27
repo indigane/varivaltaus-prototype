@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Värivaltaus / Flood Prototype</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <h1>Flood</h1>
+            <div id="stats">
+                <span>Turns: <span id="turn-count">0</span></span>
+                <span>Score: <span id="score">0</span></span>
+            </div>
+        </header>
+        <div id="canvas-container">
+            <canvas id="game-canvas"></canvas>
+        </div>
+        <div id="ui-panel">
+            <div id="color-buttons"></div>
+            <button id="reset-button">Reset Game</button>
+        </div>
+        <div id="game-status"></div>
+    </div>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
