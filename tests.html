@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Värivaltaus Tests</title>
+</head>
+<body>
+    <h1>Värivaltaus Tests</h1>
+    <div id="test-results">Open console to see test results.</div>
+    <script type="module">
+        import { runGameTests } from './js/tests/game-tests.js';
+        runGameTests();
+        const resultsDiv = document.getElementById('test-results');
+        resultsDiv.innerHTML = "Tests completed. Check console.";
+    </script>
+</body>
+</html>
