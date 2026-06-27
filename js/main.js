@@ -8,9 +8,19 @@ let gameState = null;
 let renderer = null;
 
 function init() {
+    renderer = new CanvasRenderer('game-canvas');
+    setupUI(null, handleColorSelect, handleReset);
+
+    document.getElementById('start-button').onclick = handleStart;
+}
+
+function handleStart() {
+    const playerCount = parseInt(document.getElementById('player-count').value);
+    const colorCount = parseInt(document.getElementById('color-count').value);
+    const colorRestrictions = document.getElementById('color-restrictions').value;
+
     const seed = Math.floor(Math.random() * 1000000);
     const rng = createRNG(seed);
-    const colorCount = 6;
 
     const board = generateSquareBoard({
         cols: 14,
@@ -20,36 +30,42 @@ function init() {
         rng
     });
 
-    const players = [
-        {
-            id: 0,
-            name: "Player 1",
-            teamId: 0,
+    const players = [];
+    for (let i = 0; i < playerCount; i++) {
+        players.push({
+            id: i,
+            name: `Player ${i + 1}`,
+            teamId: i,
             control: "human",
             alive: true,
             score: 0
-        }
-    ];
+        });
+    }
 
-    const teams = [
-        {
-            id: 0,
-            name: "Team 1",
-            playerIds: [0],
-            score: 0
-        }
-    ];
+    const teams = players.map(p => ({
+        id: p.id,
+        name: `Team ${p.id + 1}`,
+        playerIds: [p.id],
+        score: 0
+    }));
 
     gameState = createGame({
         board,
         players,
         teams,
         colorCount,
-        paletteId: "default-6",
-        rngSeed: seed
+        paletteId: colorCount <= 6 ? "default-6" : "default-10",
+        rngSeed: seed,
+        rules: {
+            winCondition: "mostTiles",
+            turnOrder: "players",
+            teamTerritory: "separatePlayers",
+            captureMode: "neutralOnly",
+            colorRestrictions,
+            startingPositions: "corners",
+            maxTurns: 100
+        }
     });
-
-    renderer = new CanvasRenderer('game-canvas');
 
     setupUI(gameState, handleColorSelect, handleReset);
     renderer.render(gameState);
@@ -66,7 +82,9 @@ function handleColorSelect(colorId) {
 }
 
 function handleReset() {
-    init();
+    gameState = null;
+    setupUI(null, handleColorSelect, handleReset);
+    renderer.clear();
 }
 
 window.addEventListener('load', init);

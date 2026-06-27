@@ -34,7 +34,9 @@ export function runGameTests() {
     test("Capture logic - territory expands", () => {
         // Create a fixed board for predictable testing
         const board = {
-            width: 100, height: 100, tiles: [
+            width: 100, height: 100,
+            startTileIds: [0],
+            tiles: [
                 { id: 0, colorId: 0, ownerId: null, points: [], neighbors: [1] },
                 { id: 1, colorId: 1, ownerId: null, points: [], neighbors: [0, 2] },
                 { id: 2, colorId: 1, ownerId: null, points: [], neighbors: [1] }

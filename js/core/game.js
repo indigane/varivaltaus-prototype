@@ -28,12 +28,18 @@ export function createGame(config) {
   };
 
   // Assign initial ownership based on starting positions
-  // For Milestone 1 solo, we just take the first tile (0,0)
   if (state.players.length > 0) {
-    const startTile = state.board.tiles[0];
-    startTile.ownerId = 0;
-    // Initial flood to capture same-colored adjacent tiles
-    floodCapture(state, 0, startTile.colorId);
+    state.players.forEach((player, index) => {
+      const startTileId = state.board.startTileIds[index % state.board.startTileIds.length];
+      const startTile = state.board.tiles[startTileId];
+
+      // Ensure starting tiles don't overlap if possible
+      if (startTile.ownerId === null) {
+        startTile.ownerId = player.id;
+        // Initial flood to capture same-colored adjacent tiles
+        floodCapture(state, player.id, startTile.colorId);
+      }
+    });
   }
 
   // Initial scores
@@ -85,9 +91,30 @@ export function applyMove(state, playerId, colorId) {
 
   // Check win conditions
   const totalTiles = newState.board.tiles.length;
-  const neutralTiles = newState.board.tiles.filter(t => t.ownerId === null).length;
+  const neutralTilesCount = newState.board.tiles.filter(t => t.ownerId === null).length;
 
-  if (neutralTiles === 0 || (newState.rules.maxTurns && newState.turnNumber >= newState.rules.maxTurns)) {
+  // Re-use playerScores from above
+  const maxScore = Math.max(...playerScores);
+  const otherPlayersMaxPotential = totalTiles - maxScore; // All other tiles (neutral + other players)
+
+  // Winner is certain if they have more tiles than anyone else could possibly get
+  // In a 2-player game, if P1 has 51% of tiles, they win.
+  // More generally: if P1.score > (totalTiles - P1.score), they win.
+  // Actually, it's: if P1.score > P2.score + neutralTiles, they win (assuming neutralTiles will be captured by P2).
+
+  let winnerCertain = false;
+  for (let i = 0; i < newState.players.length; i++) {
+    const myScore = playerScores[i];
+    const otherScores = playerScores.filter((s, idx) => idx !== i);
+    const bestOtherScore = otherScores.length > 0 ? Math.max(...otherScores) : 0;
+
+    if (myScore > bestOtherScore + neutralTilesCount) {
+      winnerCertain = true;
+      break;
+    }
+  }
+
+  if (neutralTilesCount === 0 || winnerCertain || (newState.rules.maxTurns && newState.turnNumber >= newState.rules.maxTurns)) {
     newState.status = "finished";
   }
 
