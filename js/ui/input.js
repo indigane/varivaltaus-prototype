@@ -55,7 +55,7 @@ function renderPlayerSetup() {
         nameInput.onchange = (e) => config.name = e.target.value;
 
         const controlSelect = document.createElement('select');
-        const controls = ["human", "random", "greedy", "aggressive", "lookahead", "hybrid"];
+        const controls = ["human", "random", "greedy", "aggressive", "lookahead", "hybrid", "spite"];
         controls.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c;

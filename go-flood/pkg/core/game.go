@@ -192,7 +192,20 @@ func ApplyMove(state *GameState, playerID int, colorID int) ([]int, string) {
 
 	if state.Status == "playing" {
 		initialPlayerID := state.CurrentPlayerID
-		state.CurrentPlayerID = (state.CurrentPlayerID + 1) % len(state.Players)
+
+		if state.Rules.TurnOrder == "snake" {
+			n := len(state.Players)
+			cycleLen := 2 * n
+			posInCycle := state.TurnNumber % cycleLen
+
+			if posInCycle < n {
+				state.CurrentPlayerID = posInCycle
+			} else {
+				state.CurrentPlayerID = cycleLen - 1 - posInCycle
+			}
+		} else {
+			state.CurrentPlayerID = (state.CurrentPlayerID + 1) % len(state.Players)
+		}
 
 		// If the next player has no legal moves (excluding their own color),
 		// they effectively skip or we skip them.

@@ -32,6 +32,8 @@ func main() {
 	startPosFlag := flag.String("start-pos", "corners", "Starting positions: corners, center-clustered, center-distributed")
 	startAreaSizeFlag := flag.Int("start-area-size", 1, "Starting area size")
 	startAreaBufferFlag := flag.Bool("start-area-buffer", true, "Whether to apply starting area buffer")
+	turnOrderFlag := flag.String("turn-order", "players", "Turn order: players or snake")
+	maskFlag := flag.String("mask", "", "Mask: none or circular")
 
 	flag.Parse()
 
@@ -48,6 +50,8 @@ func main() {
 		startPos:        *startPosFlag,
 		startAreaSize:   *startAreaSizeFlag,
 		startAreaBuffer: *startAreaBufferFlag,
+		turnOrder:       *turnOrderFlag,
+		mask:            *maskFlag,
 	}
 
 	switch *mode {
@@ -73,6 +77,8 @@ type studyConfig struct {
 	startPos        string
 	startAreaSize   int
 	startAreaBuffer bool
+	turnOrder       string
+	mask            string
 }
 
 func runSimulation(gameCount int, cfg studyConfig) {
@@ -115,6 +121,10 @@ func runSimulation(gameCount int, cfg studyConfig) {
 	totalDominance := 0.0
 	totalGames := 0
 	totalTiles := 0
+	totalLeadChanges := 0
+	totalPointOfNoReturn := 0.0
+	totalMaxLead := 0.0
+
 	for res := range results {
 		winCounts[res.winner]++
 		if res.winningTeam != -1 {
@@ -124,6 +134,9 @@ func runSimulation(gameCount int, cfg studyConfig) {
 		totalDominance += res.dominance
 		totalTiles = res.tileCount // All games in a simulation batch have same tile count
 		totalGames++
+		totalLeadChanges += res.leadChanges
+		totalPointOfNoReturn += float64(res.pointOfNoReturn) / float64(res.turns)
+		totalMaxLead += res.maxLead
 	}
 
 	duration := time.Since(startTime)
@@ -132,6 +145,9 @@ func runSimulation(gameCount int, cfg studyConfig) {
 	fmt.Printf("Average turns: %.2f\n", float64(totalTurns)/float64(totalGames))
 	fmt.Printf("Turns per 100 tiles: %.2f\n", (float64(totalTurns)/float64(totalGames))/(float64(totalTiles)/100.0))
 	fmt.Printf("Average winner dominance: %.1f%%\n", (totalDominance/float64(totalGames))*100)
+	fmt.Printf("Average lead changes: %.2f\n", float64(totalLeadChanges)/float64(totalGames))
+	fmt.Printf("Average Point of No Return: %.1f%%\n", (totalPointOfNoReturn/float64(totalGames))*100)
+	fmt.Printf("Average Max Lead of Winner: %.1f%%\n", (totalMaxLead/float64(totalGames))*100)
 	fmt.Println("Results:")
 
 	for i := 0; i < len(botNames); i++ {
@@ -158,11 +174,14 @@ func runSimulation(gameCount int, cfg studyConfig) {
 }
 
 type gameResult struct {
-	winner      int
-	winningTeam int
-	turns       int
-	dominance   float64
-	tileCount   int
+	winner           int
+	winningTeam      int
+	turns            int
+	dominance        float64
+	tileCount        int
+	leadChanges      int
+	pointOfNoReturn  int
+	maxLead          float64
 }
 
 func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) gameResult {
@@ -175,6 +194,21 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 	}
 
 	board := generateBaseBoard(cfg.boardType, opts)
+
+	if cfg.mask == "circular" {
+		minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
+		for _, t := range board.Tiles {
+			for _, p := range t.Points {
+				if p[0] < minX { minX = p[0] }
+				if p[0] > maxX { maxX = p[0] }
+				if p[1] < minY { minY = p[1] }
+				if p[1] > maxY { maxY = p[1] }
+			}
+		}
+		cx, cy := (minX+maxX)/2, (minY+maxY)/2
+		radius := math.Min(maxX-minX, maxY-minY) * 0.4
+		board = tilings.ApplyMask(board, tilings.CircularMask(cx, cy, radius))
+	}
 
 	botNames := strings.Split(cfg.botTypes, ",")
 	playerCount := len(botNames)
@@ -229,6 +263,8 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 			playerBots[i] = &bots.LookaheadBot{}
 		case "hybrid":
 			playerBots[i] = &bots.HybridBot{}
+		case "spite":
+			playerBots[i] = &bots.SpiteBot{}
 		default:
 			playerBots[i] = &bots.RandomBot{RNG: rng}
 		}
@@ -238,6 +274,7 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 	rules.TeamTerritory = cfg.teamTerritory
 	rules.StartingAreaSize = cfg.startAreaSize
 	rules.StartingAreaBuffer = cfg.startAreaBuffer
+	rules.TurnOrder = cfg.turnOrder
 
 	game := core.CreateGame(core.Config{
 		Board:      board,
@@ -247,10 +284,50 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 		Rules:      rules,
 	})
 
+	leadChanges := 0
+	lastLeader := -1
+	pointOfNoReturn := 0
+	maxLead := 0.0
+
 	for game.Status == "playing" {
 		pID := game.CurrentPlayerID
 		move := playerBots[pID].GetMove(game, pID)
 		core.ApplyMove(game, pID, move)
+
+		currentLeader := -1
+		maxScore := -1
+		isTie := false
+		for i, p := range game.Players {
+			if p.Score > maxScore {
+				maxScore = p.Score
+				currentLeader = i
+				isTie = false
+			} else if p.Score == maxScore {
+				isTie = true
+			}
+		}
+
+		if !isTie && currentLeader != lastLeader {
+			if lastLeader != -1 {
+				leadChanges++
+			}
+			lastLeader = currentLeader
+			pointOfNoReturn = game.TurnNumber
+		}
+
+		if currentLeader != -1 {
+			leaderScore := game.Players[currentLeader].Score
+			secondScore := 0
+			for i, p := range game.Players {
+				if i != currentLeader && p.Score > secondScore {
+					secondScore = p.Score
+				}
+			}
+			lead := float64(leaderScore-secondScore) / float64(len(game.Board.Tiles))
+			if lead > maxLead {
+				maxLead = lead
+			}
+		}
 	}
 
 	winners := core.GetWinner(game)
@@ -263,11 +340,18 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 		winner = winners[0]
 		winningTeam = game.Players[winner].TeamID
 		dominance = float64(game.Players[winner].Score) / float64(tileCount)
-	} else if len(winners) > 1 {
-		// Just take the first one for simplicity, or handle draw
 	}
 
-	return gameResult{winner: winner, winningTeam: winningTeam, turns: game.TurnNumber, dominance: dominance, tileCount: tileCount}
+	return gameResult{
+		winner:          winner,
+		winningTeam:     winningTeam,
+		turns:           game.TurnNumber,
+		dominance:       dominance,
+		tileCount:       tileCount,
+		leadChanges:     leadChanges,
+		pointOfNoReturn: pointOfNoReturn,
+		maxLead:         maxLead,
+	}
 }
 
 func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []int {
@@ -332,14 +416,9 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 
 	if pos == "center-distributed" {
 		// Find tiles at a moderate distance from center in different directions
-		// For simplicity, let's just use BFS to find tiles a bit further out
 		selected := []int{centerTileID}
-
-		// Find tiles at distance D from center
 		distances := computeDistances(board, centerTileID)
 
-		// target distance should be enough to gap players but not send them to corners
-		// maybe 1/4 of the board diameter
 		maxD := 0
 		for _, d := range distances {
 			if d > maxD { maxD = d }
@@ -355,7 +434,6 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 		}
 
 		if len(candidates) >= playerCount-1 {
-			// Pick candidates that are far from each other
 			for len(selected) < playerCount {
 				bestC := -1
 				maxMinD := -1
@@ -368,7 +446,6 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 
 					minD := 1000000
 					for _, s := range selected {
-						// we need distances between candidates, but let's just use coordinate distance for speed
 						d := distBetweenTiles(board, c, s)
 						if d < minD { minD = d }
 					}
@@ -391,7 +468,6 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 }
 
 func distBetweenTiles(board *core.Board, t1, t2 int) int {
-	// Simple BFS distance
 	dMap := computeDistances(board, t1)
 	return dMap[t2]
 }
@@ -497,6 +573,21 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 				}
 				baseBoard := generateBaseBoard(cfg.boardType, opts)
 
+				if cfg.mask == "circular" {
+					minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
+					for _, t := range baseBoard.Tiles {
+						for _, p := range t.Points {
+							if p[0] < minX { minX = p[0] }
+							if p[0] > maxX { maxX = p[0] }
+							if p[1] < minY { minY = p[1] }
+							if p[1] > maxY { maxY = p[1] }
+						}
+					}
+					cx, cy := (minX+maxX)/2, (minY+maxY)/2
+					radius := math.Min(maxX-minX, maxY-minY) * 0.4
+					baseBoard = tilings.ApplyMask(baseBoard, tilings.CircularMask(cx, cy, radius))
+				}
+
 				var startTileIDs []int
 				if len(fixedStartTiles) > 0 {
 					startTileIDs = fixedStartTiles
@@ -567,7 +658,6 @@ func runFairnessSearch(batchCount int, cfg studyConfig) {
 	fmt.Printf("Starting fairness search on %dx%d %s board\n", cfg.cols, cfg.rows, cfg.boardType)
 	fmt.Printf("Bots: %s\n", cfg.botTypes)
 
-	// 1. Generate a sample board to find candidate tiles
 	sampleOpts := tilings.Options{
 		Cols:       cfg.cols,
 		Rows:       cfg.rows,
@@ -593,7 +683,6 @@ func runFairnessSearch(batchCount int, cfg studyConfig) {
 	var results []comboResult
 	var mu sync.Mutex
 
-	// We use a smaller number of batches for the search phase
 	searchBatchCount := batchCount
 
 	var wg sync.WaitGroup
@@ -671,10 +760,10 @@ func findCandidateTiles(board *core.Board) []int {
 	}
 
 	targets := []core.Point{
-		{minX, minY}, {maxX, minY}, {minX, maxY}, {maxX, maxY}, // Corners
-		{(minX + maxX) / 2, minY}, {(minX + maxX) / 2, maxY},   // Top/Bottom mid
-		{minX, (minY + maxY) / 2}, {maxX, (minY + maxY) / 2},   // Left/Right mid
-		{(minX + maxX) / 2, (minY + maxY) / 2},                 // Center
+		{minX, minY}, {maxX, minY}, {minX, maxY}, {maxX, maxY},
+		{(minX + maxX) / 2, minY}, {(minX + maxX) / 2, maxY},
+		{minX, (minY + maxY) / 2}, {maxX, (minY + maxY) / 2},
+		{(minX + maxX) / 2, (minY + maxY) / 2},
 	}
 
 	candidateSet := make(map[int]bool)
@@ -762,7 +851,6 @@ func copyBoard(b core.Board) core.Board {
 		copy(newBoard.Tiles[i].Neighbors, b.Tiles[i].Neighbors)
 		newBoard.Tiles[i].Points = make([]core.Point, len(b.Tiles[i].Points))
 		copy(newBoard.Tiles[i].Points, b.Tiles[i].Points)
-		// Ensure OwnerID is nil for the copy
 		newBoard.Tiles[i].OwnerID = nil
 	}
 	return newBoard
@@ -812,6 +900,8 @@ func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng co
 			playerBots[i] = &bots.LookaheadBot{}
 		case "hybrid":
 			playerBots[i] = &bots.HybridBot{}
+		case "spite":
+			playerBots[i] = &bots.SpiteBot{}
 		default:
 			playerBots[i] = &bots.RandomBot{RNG: rng}
 		}
@@ -821,6 +911,7 @@ func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng co
 	rules.TeamTerritory = cfg.teamTerritory
 	rules.StartingAreaSize = cfg.startAreaSize
 	rules.StartingAreaBuffer = cfg.startAreaBuffer
+	rules.TurnOrder = cfg.turnOrder
 
 	game := core.CreateGame(core.Config{
 		Board:      board,
@@ -830,10 +921,50 @@ func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng co
 		Rules:      rules,
 	})
 
+	leadChanges := 0
+	lastLeader := -1
+	pointOfNoReturn := 0
+	maxLead := 0.0
+
 	for game.Status == "playing" {
 		pID := game.CurrentPlayerID
 		move := playerBots[pID].GetMove(game, pID)
 		core.ApplyMove(game, pID, move)
+
+		currentLeader := -1
+		maxScore := -1
+		isTie := false
+		for i, p := range game.Players {
+			if p.Score > maxScore {
+				maxScore = p.Score
+				currentLeader = i
+				isTie = false
+			} else if p.Score == maxScore {
+				isTie = true
+			}
+		}
+
+		if !isTie && currentLeader != lastLeader {
+			if lastLeader != -1 {
+				leadChanges++
+			}
+			lastLeader = currentLeader
+			pointOfNoReturn = game.TurnNumber
+		}
+
+		if currentLeader != -1 {
+			leaderScore := game.Players[currentLeader].Score
+			secondScore := 0
+			for i, p := range game.Players {
+				if i != currentLeader && p.Score > secondScore {
+					secondScore = p.Score
+				}
+			}
+			lead := float64(leaderScore-secondScore) / float64(len(game.Board.Tiles))
+			if lead > maxLead {
+				maxLead = lead
+			}
+		}
 	}
 
 	winners := core.GetWinner(game)
@@ -848,5 +979,14 @@ func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng co
 		dominance = float64(game.Players[winner].Score) / float64(tileCount)
 	}
 
-	return gameResult{winner: winner, winningTeam: winningTeam, turns: game.TurnNumber, dominance: dominance, tileCount: tileCount}
+	return gameResult{
+		winner:          winner,
+		winningTeam:     winningTeam,
+		turns:           game.TurnNumber,
+		dominance:       dominance,
+		tileCount:       tileCount,
+		leadChanges:     leadChanges,
+		pointOfNoReturn: pointOfNoReturn,
+		maxLead:         maxLead,
+	}
 }

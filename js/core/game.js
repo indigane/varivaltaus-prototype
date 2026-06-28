@@ -182,9 +182,21 @@ export function applyMove(state, playerId, colorId) {
     newState.status = "finished";
   }
 
-  // Advance turn (simple for solo/2p)
+  // Advance turn
   if (newState.status === "playing") {
-    newState.currentPlayerId = (newState.currentPlayerId + 1) % newState.players.length;
+    if (newState.rules.turnOrder === "snake") {
+      const n = newState.players.length;
+      const cycleLen = 2 * n;
+      const posInCycle = newState.turnNumber % cycleLen;
+
+      if (posInCycle < n) {
+        newState.currentPlayerId = posInCycle;
+      } else {
+        newState.currentPlayerId = cycleLen - 1 - posInCycle;
+      }
+    } else {
+      newState.currentPlayerId = (newState.currentPlayerId + 1) % newState.players.length;
+    }
   }
 
   return {
