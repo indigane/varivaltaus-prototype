@@ -19,14 +19,32 @@ go run cmd/sim/main.go [flags]
 
 ### Configuration Flags
 
-- `-games`: Number of games to simulate (default: 100)
-- `-board`: Board type (square, triangle, hex, pentagon-cairo, voronoi-jittered, voronoi-random) (default: "square")
+- `-mode`: Operation mode: `sim` (standard simulation), `fairness` (analyze turn-order and spatial bias), or `search` (find optimal starting positions) (default: "sim")
+- `-games`: Number of games to simulate or batches to run (default: 100)
+- `-board`: Board type (`square`, `triangle`, `hex`, `rhombitrihexagonal`, `pentagon-cairo`, `voronoi-jittered`, `voronoi-random`) (default: "square")
 - `-cols`: Number of columns (default: 20)
 - `-rows`: Number of rows (default: 20)
 - `-colors`: Number of colors (default: 6)
-- `-bots`: Comma-separated list of bot types for players (e.g., "greedy,random,lookahead") (default: "greedy,random")
+- `-bots`: Comma-separated list of bot types for players (e.g., `greedy,random,lookahead`) (default: "greedy,random")
 - `-concurrency`: Number of concurrent simulations (default: 8)
 - `-seed`: Initial seed for the simulation (default: current timestamp)
+- `-start-tiles`: Comma-separated list of tile IDs to use as starting positions in `fairness` mode.
+
+### Fairness Analysis
+
+The `-mode fairness` flag runs rotations of players across the provided or generated start tiles to isolate spatial advantage from turn-order advantage.
+
+```bash
+go run cmd/sim/main.go -mode fairness -games 100 -bots greedy,greedy -start-tiles 0,399
+```
+
+### Fairness Search
+
+The `-mode search` flag automatically evaluates various combinations of candidate tiles (corners, mid-edges, center) to find the most balanced starting positions for the given player count.
+
+```bash
+go run cmd/sim/main.go -mode search -games 50 -board hex -bots greedy,greedy,greedy
+```
 
 ### Example
 
