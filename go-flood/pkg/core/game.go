@@ -191,7 +191,35 @@ func ApplyMove(state *GameState, playerID int, colorID int) ([]int, string) {
 	}
 
 	if state.Status == "playing" {
+		initialPlayerID := state.CurrentPlayerID
 		state.CurrentPlayerID = (state.CurrentPlayerID + 1) % len(state.Players)
+
+		// If the next player has no legal moves (excluding their own color),
+		// they effectively skip or we skip them.
+		// However, standard rules say everyone must be able to move or the game ends.
+		// To prevent infinite loops in bots, we must ensure we don't get stuck.
+
+		// Wait, if no player has legal moves, the game should probably finish.
+		allStuck := true
+		for i := 0; i < len(state.Players); i++ {
+			pID := (initialPlayerID + 1 + i) % len(state.Players)
+			hasMove := false
+			for c := 0; c < state.ColorCount; c++ {
+				if IsLegalMove(state, pID, c) {
+					hasMove = true
+					state.CurrentPlayerID = pID
+					allStuck = false
+					break
+				}
+			}
+			if hasMove {
+				break
+			}
+		}
+
+		if allStuck {
+			state.Status = "finished"
+		}
 	}
 
 	return capturedTileIDs, ""
