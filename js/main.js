@@ -16,6 +16,7 @@ import { getMove as getGreedyMove } from './bots/greedy.js';
 import { getMove as getAggressiveMove } from './bots/aggressive.js';
 import { getMove as getLookaheadMove } from './bots/lookahead.js';
 import { getMove as getHybridMove } from './bots/hybrid.js';
+import { getMove as getSpiteMove } from './bots/spite.js';
 
 let gameState = null;
 let renderer = null;
@@ -27,7 +28,8 @@ const BOTS = {
     greedy: getGreedyMove,
     aggressive: getAggressiveMove,
     lookahead: getLookaheadMove,
-    hybrid: getHybridMove
+    hybrid: getHybridMove,
+    spite: getSpiteMove
 };
 
 function init() {
@@ -45,6 +47,7 @@ function handleStart() {
     const tileSize = parseInt(document.getElementById('tile-size').value);
     const colorCount = parseInt(document.getElementById('color-count').value);
     const colorRestrictions = document.getElementById('color-restrictions').value;
+    const turnOrder = document.getElementById('turn-order').value;
     const teamTerritory = document.getElementById('team-territory').value;
     const startingAreaSize = parseInt(document.getElementById('starting-area-size').value);
     const startingAreaBuffer = document.getElementById('starting-area-buffer').checked;
@@ -110,7 +113,7 @@ function handleStart() {
         rngSeed: seed,
         rules: {
             winCondition: "mostTiles",
-            turnOrder: "players",
+            turnOrder,
             teamTerritory,
             captureMode: "neutralOnly",
             colorRestrictions,

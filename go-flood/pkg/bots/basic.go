@@ -46,6 +46,42 @@ func (b *GreedyBot) GetMove(state *core.GameState, playerID int) int {
 	return bestColor
 }
 
+type SpiteBot struct{}
+
+func (b *SpiteBot) GetMove(state *core.GameState, playerID int) int {
+	bestColor := -1
+	maxSpite := -1
+
+	for c := 0; c < state.ColorCount; c++ {
+		if !core.IsLegalMove(state, playerID, c) {
+			continue
+		}
+
+		ownGain := SimulateMove(state, playerID, c)
+
+		totalOpponentGain := 0
+		for pID := range state.Players {
+			if pID == playerID {
+				continue
+			}
+			totalOpponentGain += SimulateMove(state, pID, c)
+		}
+
+		spiteScore := totalOpponentGain*1000 + ownGain
+
+		if spiteScore > maxSpite {
+			maxSpite = spiteScore
+			bestColor = c
+		}
+	}
+
+	if bestColor == -1 {
+		return (&GreedyBot{}).GetMove(state, playerID)
+	}
+
+	return bestColor
+}
+
 func SimulateMove(state *core.GameState, playerID int, colorID int) int {
 	queue := []int{}
 	visited := make(map[int]bool)
