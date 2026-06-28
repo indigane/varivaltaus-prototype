@@ -13,11 +13,13 @@
         import { runTilingTests } from './js/tests/tiling-tests.js';
         import { runCustomMapTests } from './js/tests/custom-map-tests.js';
         import { runCairoTests } from './js/tests/cairo-tests.js';
+        import { runVoronoiTests } from './js/tests/voronoi-tests.js';
         runGameTests();
         runBotTests();
         runTilingTests();
         runCustomMapTests();
         runCairoTests();
+        runVoronoiTests();
         const resultsDiv = document.getElementById('test-results');
         resultsDiv.innerHTML = "Tests completed. Check console.";
     </script>
