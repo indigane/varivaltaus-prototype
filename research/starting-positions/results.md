@@ -44,14 +44,3 @@ Triangle boards are the most difficult to balance for 3 players due to the restr
 2. **Symmetry is a Trap:** For 3 players on a 2-player-symmetric board (like a rectangle), picking symmetric corners often results in one player being "sandwiched" with almost no chance of winning.
 3. **Mid-Points are Key:** Better fairness is often achieved by placing one player at a mid-edge or center point rather than forcing all players into corners.
 
-## How to Reproduce
-
-Run the search tool in the `go-flood` directory:
-
-```bash
-# Search for best 3-player positions on 40x27 square board
-go run cmd/sim/main.go -mode search -games 100 -cols 40 -rows 27 -bots greedy,greedy,greedy
-
-# Analyze a specific set of tiles
-go run cmd/sim/main.go -mode fairness -games 100 -cols 40 -rows 27 -start-tiles 0,1040,520 -bots greedy,greedy,greedy
-```
