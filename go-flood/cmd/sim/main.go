@@ -114,6 +114,7 @@ func runSimulation(gameCount int, cfg studyConfig) {
 	totalTurns := 0
 	totalDominance := 0.0
 	totalGames := 0
+	totalTiles := 0
 	for res := range results {
 		winCounts[res.winner]++
 		if res.winningTeam != -1 {
@@ -121,12 +122,15 @@ func runSimulation(gameCount int, cfg studyConfig) {
 		}
 		totalTurns += res.turns
 		totalDominance += res.dominance
+		totalTiles = res.tileCount // All games in a simulation batch have same tile count
 		totalGames++
 	}
 
 	duration := time.Since(startTime)
 	fmt.Printf("\nSimulation finished in %v (%.2f games/sec)\n", duration, float64(totalGames)/duration.Seconds())
+	fmt.Printf("Total tiles: %d\n", totalTiles)
 	fmt.Printf("Average turns: %.2f\n", float64(totalTurns)/float64(totalGames))
+	fmt.Printf("Turns per 100 tiles: %.2f\n", (float64(totalTurns)/float64(totalGames))/(float64(totalTiles)/100.0))
 	fmt.Printf("Average winner dominance: %.1f%%\n", (totalDominance/float64(totalGames))*100)
 	fmt.Println("Results:")
 
@@ -158,6 +162,7 @@ type gameResult struct {
 	winningTeam int
 	turns       int
 	dominance   float64
+	tileCount   int
 }
 
 func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) gameResult {
@@ -252,16 +257,17 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 	winner := -1
 	winningTeam := -1
 	dominance := 0.0
+	tileCount := len(game.Board.Tiles)
 
 	if len(winners) == 1 {
 		winner = winners[0]
 		winningTeam = game.Players[winner].TeamID
-		dominance = float64(game.Players[winner].Score) / float64(len(game.Board.Tiles))
+		dominance = float64(game.Players[winner].Score) / float64(tileCount)
 	} else if len(winners) > 1 {
 		// Just take the first one for simplicity, or handle draw
 	}
 
-	return gameResult{winner: winner, winningTeam: winningTeam, turns: game.TurnNumber, dominance: dominance}
+	return gameResult{winner: winner, winningTeam: winningTeam, turns: game.TurnNumber, dominance: dominance, tileCount: tileCount}
 }
 
 func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []int {
@@ -834,12 +840,13 @@ func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng co
 	winner := -1
 	winningTeam := -1
 	dominance := 0.0
+	tileCount := len(game.Board.Tiles)
 
 	if len(winners) == 1 {
 		winner = winners[0]
 		winningTeam = game.Players[winner].TeamID
-		dominance = float64(game.Players[winner].Score) / float64(len(game.Board.Tiles))
+		dominance = float64(game.Players[winner].Score) / float64(tileCount)
 	}
 
-	return gameResult{winner: winner, winningTeam: winningTeam, turns: game.TurnNumber, dominance: dominance}
+	return gameResult{winner: winner, winningTeam: winningTeam, turns: game.TurnNumber, dominance: dominance, tileCount: tileCount}
 }
