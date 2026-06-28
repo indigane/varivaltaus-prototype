@@ -13,7 +13,7 @@ import (
 
 func main() {
 	gameCount := flag.Int("games", 100, "Number of games to simulate")
-	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, pentagon-cairo, voronoi-jittered, voronoi-random)")
+	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, rhombitrihexagonal, pentagon-cairo, voronoi-jittered, voronoi-random)")
 	colsFlag := flag.Int("cols", 20, "Number of columns")
 	rowsFlag := flag.Int("rows", 20, "Number of rows")
 	colorCountFlag := flag.Int("colors", 6, "Number of colors")
@@ -104,6 +104,8 @@ func runSingleGame(boardType string, cols, rows, colorCount int, botNames []stri
 		board = tilings.GenerateHexBoard(opts)
 	case "pentagon-cairo":
 		board = tilings.GenerateCairoPentagonBoard(opts)
+	case "rhombitrihexagonal":
+		board = tilings.GenerateRhombitrihexagonalBoard(opts)
 	case "voronoi-jittered":
 		board = tilings.GenerateVoronoiBoard(opts, "jittered")
 	case "voronoi-random":
