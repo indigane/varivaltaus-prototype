@@ -3,7 +3,7 @@ const STORAGE_KEY = 'flood-settings';
 const RANGE_IDS = ['board-cols', 'board-rows', 'color-count', 'starting-area-size'];
 const SELECT_IDS = ['board-type', 'board-shape', 'color-restrictions', 'turn-order', 'team-territory'];
 const CHECKBOX_IDS = ['starting-area-buffer', 'allow-same-starting-color', 'enable-teams'];
-const OTHER_IDS = ['speed-slider', 'tile-style'];
+const OTHER_IDS = ['speed-slider', 'tile-style', 'emboss-size', 'emboss-opacity', 'gutter-size'];
 
 export function saveSettings(playerConfigs) {
     const data = {};
@@ -58,13 +58,17 @@ export function loadSettings() {
         if (el && data[id] !== undefined) el.checked = data[id];
     }
 
-    // Update tile-style button group to match loaded value
+    // Update tile-style button group and options visibility
     const tsInput = document.getElementById('tile-style');
     const tsSel = document.getElementById('tile-style-selector');
     if (tsInput && tsSel) {
         tsSel.querySelectorAll('.ts-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.style === tsInput.value);
         });
+        const embossOpts = document.getElementById('emboss-options');
+        const gutterOpts = document.getElementById('gutter-options');
+        if (embossOpts) embossOpts.hidden = (tsInput.value !== 'embossed');
+        if (gutterOpts) gutterOpts.hidden = (tsInput.value !== 'rounded');
     }
 
     return data.playerConfigs || null;

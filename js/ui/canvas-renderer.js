@@ -19,7 +19,7 @@ export class CanvasRenderer {
         this.clear();
 
         if (tileStyle === 'rounded') {
-            this._drawRoundedRegions(board, palette);
+            this._drawRoundedRegions(board, palette, state.gutterSize);
             return;
         }
 
@@ -32,7 +32,7 @@ export class CanvasRenderer {
         if (tileStyle === 'embossed') {
             const edgeMap = this._buildEdgeMap(board);
             const colorEdges = this._collectColorBoundaryEdges(edgeMap);
-            this.drawEmbossedBoundaries(colorEdges);
+            this.drawEmbossedBoundaries(colorEdges, palette, state.embossSize, state.embossOpacity);
         } else {
             this.drawSubtleGrid(board);
             const edgeMap = this._buildEdgeMap(board);
@@ -163,6 +163,17 @@ export class CanvasRenderer {
         return edges;
     }
 
+    _collectInteriorColorEdges(edgeMap) {
+        const edges = [];
+        for (const [, edge] of edgeMap) {
+            const tiles = edge.tiles;
+            if (tiles.length === 2 && tiles[0].colorId !== tiles[1].colorId) {
+                edges.push(edge);
+            }
+        }
+        return edges;
+    }
+
     // ─── Flat Style ──────────────────────────────────────────
 
     drawFlatBoundaries(boundaryEdges) {
@@ -181,45 +192,136 @@ export class CanvasRenderer {
 
     // ─── Embossed Style ──────────────────────────────────────
 
-    drawEmbossedBoundaries(edges) {
+    drawEmbossedBoundaries(edges, palette, embossSize, embossOpacity) {
         const { ctx, scale, offsetX, offsetY } = this;
-        const d = 1.5 / this.dpr;
+        const sz = embossSize || 1.5;
+        const d = sz / this.dpr;
+        const strength = embossOpacity !== undefined ? embossOpacity : 0.5;
 
         ctx.lineCap = 'butt';
         ctx.lineJoin = 'miter';
+        ctx.lineWidth = sz;
 
-        // Highlight pass (bottom-right) — light from top-left makes raised edges bright here
-        ctx.strokeStyle = 'rgba(255,255,255,0.30)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
         for (const e of edges) {
-            ctx.moveTo(e.p1[0] * scale + offsetX + d, e.p1[1] * scale + offsetY + d);
-            ctx.lineTo(e.p2[0] * scale + offsetX + d, e.p2[1] * scale + offsetY + d);
-        }
-        ctx.stroke();
+            const tiles = e.tiles;
 
-        // Shadow pass (top-left) — raised surface casts shadow on this side
-        ctx.strokeStyle = 'rgba(0,0,0,0.40)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        for (const e of edges) {
-            ctx.moveTo(e.p1[0] * scale + offsetX - d, e.p1[1] * scale + offsetY - d);
-            ctx.lineTo(e.p2[0] * scale + offsetX - d, e.p2[1] * scale + offsetY - d);
+            const x1 = e.p1[0] * scale + offsetX;
+            const y1 = e.p1[1] * scale + offsetY;
+            const x2 = e.p2[0] * scale + offsetX;
+            const y2 = e.p2[1] * scale + offsetY;
+
+            // Compute edge normal (perpendicular)
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.hypot(dx, dy);
+            if (len < 0.1) continue;
+            let nx = -dy / len * d, ny = dx / len * d;
+
+            // Ensure normal points toward tile[0] by checking against its centroid
+            const t0pts = tiles[0].points;
+            let cx0 = 0, cy0 = 0;
+            for (const p of t0pts) { cx0 += p[0]; cy0 += p[1]; }
+            cx0 = cx0 / t0pts.length * scale + offsetX;
+            cy0 = cy0 / t0pts.length * scale + offsetY;
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            if (nx * (cx0 - mx) + ny * (cy0 - my) < 0) {
+                nx = -nx; ny = -ny;
+            }
+
+            // Directional lighting: light from top-left
+            // tile[0]'s outward normal is (-nx,-ny); faces light if (-nx)(-1)+(-ny)(-1)>0 → nx+ny>0
+            const t0FacesLight = nx + ny > 0;
+
+            // Tile 0 side (+normal direction, inward toward tile[0])
+            const c0 = this._parseColor(palette[tiles[0].colorId % palette.length]);
+            const t0shift = t0FacesLight ? strength * 25 : -strength * 25;
+            const col0 = this._shiftLightness(c0, t0shift);
+            ctx.strokeStyle = `rgb(${col0[0]},${col0[1]},${col0[2]})`;
+            ctx.beginPath();
+            ctx.moveTo(x1 + nx, y1 + ny);
+            ctx.lineTo(x2 + nx, y2 + ny);
+            ctx.stroke();
+
+            // Tile 1 side (-normal direction) — only for interior edges
+            if (tiles.length > 1) {
+                const c1 = this._parseColor(palette[tiles[1].colorId % palette.length]);
+                const t1shift = t0FacesLight ? -strength * 25 : strength * 25;
+                const col1 = this._shiftLightness(c1, t1shift);
+                ctx.strokeStyle = `rgb(${col1[0]},${col1[1]},${col1[2]})`;
+                ctx.beginPath();
+                ctx.moveTo(x1 - nx, y1 - ny);
+                ctx.lineTo(x2 - nx, y2 - ny);
+                ctx.stroke();
+            }
         }
-        ctx.stroke();
+    }
+
+    _parseColor(color) {
+        // Handle hex (#rrggbb or #rgb) and rgb() strings
+        if (color[0] === '#') {
+            let hex = color.slice(1);
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+        }
+        const m = color.match(/(\d+)/g);
+        if (m) return [+m[0], +m[1], +m[2]];
+        return [128, 128, 128];
+    }
+
+    _shiftLightness(rgb, amount) {
+        // Convert RGB to HSL, shift L and desaturate, convert back
+        let [r, g, b] = rgb.map(c => c / 255);
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+            else if (max === g) h = ((b - r) / d + 2) / 6;
+            else h = ((r - g) / d + 4) / 6;
+        }
+
+        // Shift lightness by amount (in percentage points, 0-100 scale)
+        l = Math.max(0, Math.min(1, l + amount / 100));
+        // Desaturate proportionally — shadows and highlights lose saturation
+        s = Math.max(0, s * (1 - Math.abs(amount) / 100 * 0.6));
+
+        // HSL to RGB
+        if (s === 0) {
+            const v = Math.round(l * 255);
+            return [v, v, v];
+        }
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        return [
+            Math.round(hue2rgb(p, q, h + 1/3) * 255),
+            Math.round(hue2rgb(p, q, h) * 255),
+            Math.round(hue2rgb(p, q, h - 1/3) * 255)
+        ];
     }
 
     // ─── Rounded Style ───────────────────────────────────────
 
-    _drawRoundedRegions(board, palette) {
+    _drawRoundedRegions(board, palette, gutterFraction) {
         const { ctx, scale, offsetX, offsetY } = this;
 
-        // Compute radius from first tile's edge length (≈ half tile size)
+        // Compute radius from first tile's edge length
         const t0 = board.tiles[0];
         const p0 = t0.points[0], p1 = t0.points[1];
         const edgeLen = Math.hypot((p1[0] - p0[0]) * scale, (p1[1] - p0[1]) * scale);
         const radius = edgeLen * 0.45;
-        const gutterHalf = Math.max(1, edgeLen * 0.04);
+        const gf = gutterFraction !== undefined ? gutterFraction : 0.04;
+        const gutterHalf = Math.max(0, edgeLen * gf);
 
         // Find connected same-color regions and draw each as a rounded blob
         const regions = this._findColorRegions(board);
@@ -229,27 +331,38 @@ export class CanvasRenderer {
             const edges = this._regionBoundaryEdges(region.tiles);
             const paths = this._buildConnectedPaths(edges);
 
+            // Fill all boundary loops as a single compound path with evenodd
+            // so that interior holes are properly cut out.
+            ctx.fillStyle = color;
+            ctx.beginPath();
             for (const rawPts of paths) {
-                // Fill the rounded region
-                ctx.fillStyle = color;
-                this._traceRoundedPath(rawPts, radius);
-                ctx.fill();
-
-                // Erase a thin stroke along the SAME rounded path for the gutter
-                ctx.save();
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.strokeStyle = 'rgba(255,255,255,1)';
-                ctx.lineWidth = gutterHalf * 2;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                this._traceRoundedPath(rawPts, radius);
-                ctx.stroke();
-                ctx.restore();
+                this._addRoundedSubpath(rawPts, radius);
             }
+            ctx.fill('evenodd');
+
+            // Erase a thin stroke along all boundary loops for the gutter
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(255,255,255,1)';
+            ctx.lineWidth = gutterHalf * 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            for (const rawPts of paths) {
+                this._addRoundedSubpath(rawPts, radius);
+            }
+            ctx.stroke();
+            ctx.restore();
         }
     }
 
     _traceRoundedPath(rawPts, maxRadius) {
+        const { ctx } = this;
+        ctx.beginPath();
+        this._addRoundedSubpath(rawPts, maxRadius);
+    }
+
+    _addRoundedSubpath(rawPts, maxRadius) {
         const { ctx, scale, offsetX, offsetY } = this;
 
         // Convert to screen coords
@@ -273,19 +386,61 @@ export class CanvasRenderer {
             edgeLen[i] = Math.hypot(b[0] - a[0], b[1] - a[1]);
         }
 
-        ctx.beginPath();
-        // Start from midpoint of last→first edge
-        ctx.moveTo((pts[n - 1][0] + pts[0][0]) / 2, (pts[n - 1][1] + pts[0][1]) / 2);
+        // Compute first corner's incoming tangent to set the start point
+        const eBefore0 = edgeLen[(n - 1)];
+        const eAfter0 = edgeLen[0];
+        let r0 = Math.min(maxRadius, eBefore0 * 0.45, eAfter0 * 0.45);
+        const prev0 = pts[n - 1], curr0 = pts[0], next0 = pts[1];
+        const dx1_0 = prev0[0] - curr0[0], dy1_0 = prev0[1] - curr0[1];
+        const angle0 = this._cornerAngle(prev0, curr0, next0);
+        const cross0 = dx1_0 * (next0[1] - curr0[1]) - dy1_0 * (next0[0] - curr0[0]);
+        if (angle0 < Math.PI / 2) r0 *= angle0 / (Math.PI / 2);
+        if (cross0 > 0 && angle0 < Math.PI / 2) r0 *= angle0 / (Math.PI / 2);
+
+        const cut0 = Math.min(r0, eBefore0 * 0.45);
+        // Start at the incoming tangent of the first corner
+        const startX = curr0[0] + (prev0[0] - curr0[0]) / eBefore0 * cut0;
+        const startY = curr0[1] + (prev0[1] - curr0[1]) / eBefore0 * cut0;
+        ctx.moveTo(startX, startY);
+
         for (let i = 0; i < n; i++) {
+            const prev = pts[(i - 1 + n) % n];
             const curr = pts[i];
             const next = pts[(i + 1) % n];
-            // Cap radius by half the shorter adjacent edge
-            const eBefore = edgeLen[(i - 1 + n) % n];
-            const eAfter = edgeLen[i];
-            const r = Math.min(maxRadius, eBefore * 0.45, eAfter * 0.45);
-            ctx.arcTo(curr[0], curr[1], next[0], next[1], r);
+
+            const eBef = edgeLen[(i - 1 + n) % n];
+            const eAft = edgeLen[i];
+            let r = Math.min(maxRadius, eBef * 0.45, eAft * 0.45);
+
+            const angle = this._cornerAngle(prev, curr, next);
+            const dx1 = prev[0] - curr[0], dy1 = prev[1] - curr[1];
+            const cross = dx1 * (next[1] - curr[1]) - dy1 * (next[0] - curr[0]);
+            if (angle < Math.PI / 2) r *= angle / (Math.PI / 2);
+            if (cross > 0 && angle < Math.PI / 2) r *= angle / (Math.PI / 2);
+
+            const cutIn = Math.min(r, eBef * 0.45);
+            const cutOut = Math.min(r, eAft * 0.45);
+
+            // Tangent point on incoming edge
+            const inX = curr[0] + (prev[0] - curr[0]) / eBef * cutIn;
+            const inY = curr[1] + (prev[1] - curr[1]) / eBef * cutIn;
+            // Tangent point on outgoing edge
+            const outX = curr[0] + (next[0] - curr[0]) / eAft * cutOut;
+            const outY = curr[1] + (next[1] - curr[1]) / eAft * cutOut;
+
+            // Line to incoming tangent, then curve around corner
+            ctx.lineTo(inX, inY);
+            ctx.quadraticCurveTo(curr[0], curr[1], outX, outY);
         }
         ctx.closePath();
+    }
+
+    _cornerAngle(prev, curr, next) {
+        const dx1 = prev[0] - curr[0], dy1 = prev[1] - curr[1];
+        const dx2 = next[0] - curr[0], dy2 = next[1] - curr[1];
+        const dot = dx1 * dx2 + dy1 * dy2;
+        const cross = dx1 * dy2 - dy1 * dx2;
+        return Math.atan2(Math.abs(cross), dot);
     }
 
     _findColorRegions(board) {

@@ -53,8 +53,16 @@ function init() {
             tsSel.querySelectorAll('.ts-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('tile-style').value = btn.dataset.style;
+            updateTileStyleOptions(btn.dataset.style);
         };
     }
+}
+
+function updateTileStyleOptions(style) {
+    const embossOpts = document.getElementById('emboss-options');
+    const gutterOpts = document.getElementById('gutter-options');
+    if (embossOpts) embossOpts.hidden = (style !== 'embossed');
+    if (gutterOpts) gutterOpts.hidden = (style !== 'rounded');
 }
 
 function handleStart() {
@@ -146,6 +154,9 @@ function handleStart() {
     });
 
     gameState.tileStyle = tileStyle;
+    gameState.embossSize = parseFloat(document.getElementById('emboss-size').value);
+    gameState.embossOpacity = parseInt(document.getElementById('emboss-opacity').value) / 100;
+    gameState.gutterSize = parseInt(document.getElementById('gutter-size').value) / 100;
 
     setupUI(gameState, handleColorSelect, handleReset, handleStep, handleTogglePlay);
     renderer.render(gameState);
