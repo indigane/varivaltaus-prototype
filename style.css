@@ -111,10 +111,15 @@ input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
+    height: 20px;
+    background: transparent;
+    outline: none;
+    cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
     height: 4px;
     background: var(--bg-elevated);
     border-radius: 2px;
-    outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -123,6 +128,12 @@ input[type="range"]::-webkit-slider-thumb {
     background: var(--accent);
     cursor: pointer;
     border: 2px solid var(--bg-deep);
+    margin-top: -6px;
+}
+input[type="range"]::-moz-range-track {
+    height: 4px;
+    background: var(--bg-elevated);
+    border-radius: 2px;
 }
 input[type="range"]::-moz-range-thumb {
     width: 16px; height: 16px;
@@ -130,6 +141,12 @@ input[type="range"]::-moz-range-thumb {
     background: var(--accent);
     cursor: pointer;
     border: 2px solid var(--bg-deep);
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+input[type="range"]:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 input[type="checkbox"] {
