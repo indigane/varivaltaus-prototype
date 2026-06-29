@@ -71,6 +71,16 @@
                         </button>
                     </div>
                     <input type="hidden" id="tile-style" value="flat">
+                    <div class="tile-style-options" id="emboss-options" hidden>
+                        <label>Emboss Size <output id="emboss-size-val">1.5</output></label>
+                        <input type="range" id="emboss-size" min="0.5" max="4" step="0.5" value="1.5" oninput="document.getElementById('emboss-size-val').value=this.value">
+                        <label>Emboss Strength <output id="emboss-opacity-val">50</output>%</label>
+                        <input type="range" id="emboss-opacity" min="10" max="100" step="5" value="50" oninput="document.getElementById('emboss-opacity-val').value=this.value">
+                    </div>
+                    <div class="tile-style-options" id="gutter-options" hidden>
+                        <label>Gutter Size <output id="gutter-size-val">4</output>%</label>
+                        <input type="range" id="gutter-size" min="0" max="15" step="1" value="4" oninput="document.getElementById('gutter-size-val').value=this.value">
+                    </div>
                 </div>
             </div>
 

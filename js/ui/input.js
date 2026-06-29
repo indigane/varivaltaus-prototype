@@ -126,10 +126,10 @@ export function updateStats(state) {
         pctEl.textContent = `${pct}%`;
         card.appendChild(pctEl);
 
-        // Bottom bar for territory visualization (relative to other players)
+        // Bottom bar for territory visualization (relative to half of total tiles)
         const bar = document.createElement('div');
         bar.className = 'sc-bar';
-        const relPct = totalOwned > 0 ? Math.round((player.score / totalOwned) * 100) : 0;
+        const relPct = totalTiles > 0 ? Math.round((player.score / (totalTiles / 2)) * 100) : 0;
         bar.style.width = `${relPct}%`;
         bar.style.background = pColor;
         card.appendChild(bar);
@@ -307,6 +307,7 @@ function showGameOver(state, palette) {
     }
 
     scoresEl.innerHTML = '';
+    const totalTiles = sorted.reduce((sum, p) => sum + p.score, 0);
     sorted.forEach((player, idx) => {
         const row = document.createElement('div');
         row.className = 'go-score-row';
@@ -314,13 +315,20 @@ function showGameOver(state, palette) {
 
         const ownedTile = state.board.tiles.find(t => t.ownerId === player.id);
         const pColor = ownedTile ? palette[ownedTile.colorId % palette.length] : playerColor(player.id);
+        const pct = totalTiles > 0 ? (player.score / totalTiles * 100) : 0;
+        const barPct = maxScore > 0 ? (player.score / maxScore * 100) : 0;
 
         row.innerHTML = `
-            <span class="go-rank">${idx + 1}</span>
-            <span class="go-color" style="background:${pColor}"></span>
-            <span class="go-name">${player.name}</span>
-            ${player.control !== 'human' ? `<span class="go-type">${CONTROL_LABELS[player.control] || player.control}</span>` : ''}
-            <span class="go-tiles">${player.score}</span>
+            <div class="go-row-top">
+                <span class="go-rank">${idx + 1}</span>
+                <span class="go-color" style="background:${pColor}"></span>
+                <span class="go-name">${player.name}</span>
+                ${player.control !== 'human' ? `<span class="go-type">${CONTROL_LABELS[player.control] || player.control}</span>` : ''}
+                <span class="go-tiles">${player.score} <span class="go-pct">(${pct.toFixed(1)}%)</span></span>
+            </div>
+            <div class="go-bar-track">
+                <div class="go-bar-fill" style="width:${barPct}%;background:${pColor}"></div>
+            </div>
         `;
         scoresEl.appendChild(row);
     });

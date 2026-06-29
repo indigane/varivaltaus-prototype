@@ -250,6 +250,18 @@ input[type="checkbox"] {
     color: var(--text-muted);
     margin-bottom: 6px;
 }
+.tile-style-options {
+    margin-top: 8px;
+}
+.tile-style-options label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.tile-style-options input[type="range"] {
+    width: 100%;
+    margin-top: 2px;
+}
+.tile-style-options[hidden] { display: none; }
 .tile-style-selector {
     display: flex;
     gap: 8px;
@@ -357,7 +369,7 @@ input[type="checkbox"] {
 }
 .player-setup-row input[type="text"] {
     width: 90px;
-    padding: 5px 8px;
+    padding: 7px 10px;
     font-size: 13px;
     font-family: var(--font);
     color: var(--text-primary);
@@ -817,13 +829,17 @@ input[type="checkbox"] {
 }
 
 .go-score-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: block;
     padding: 8px 12px;
     background: var(--bg-surface);
     border-radius: var(--radius-sm);
     font-size: 14px;
+}
+.go-row-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
 }
 .go-score-row.winner { border: 1px solid var(--warning); background: rgba(245,158,11,0.08); }
 .go-rank    { font-weight: 800; color: var(--text-muted); width: 24px; text-align: center; }
@@ -831,6 +847,20 @@ input[type="checkbox"] {
 .go-name    { font-weight: 600; flex: 1; text-align: left; }
 .go-type    { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
 .go-tiles   { font-family: var(--font-mono); color: var(--text-secondary); }
+.go-pct     { font-size: 11px; color: var(--text-muted); }
+.go-bar-track {
+    display: block;
+    height: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 5px;
+    overflow: hidden;
+}
+.go-bar-fill {
+    display: block;
+    height: 10px;
+    border-radius: 5px;
+    transition: width 0.6s ease;
+}
 
 .game-over-actions {
     display: flex;
