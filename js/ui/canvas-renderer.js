@@ -194,9 +194,24 @@ export class CanvasRenderer {
 
     drawEmbossedBoundaries(edges, palette, embossSize, embossOpacity) {
         const { ctx, scale, offsetX, offsetY } = this;
-        const sz = embossSize || 1.5;
-        const d = sz / this.dpr;
+        const baseSz = embossSize || 1.5;
         const strength = embossOpacity !== undefined ? embossOpacity : 0.5;
+
+        // Compute median edge length in screen pixels to scale bevel for small tiles
+        const edgeLengths = [];
+        for (const e of edges) {
+            const dx = (e.p2[0] - e.p1[0]) * scale;
+            const dy = (e.p2[1] - e.p1[1]) * scale;
+            edgeLengths.push(Math.hypot(dx, dy));
+        }
+        edgeLengths.sort((a, b) => a - b);
+        const medianLen = edgeLengths.length > 0
+            ? edgeLengths[Math.floor(edgeLengths.length / 2)]
+            : 35;
+        // Scale bevel down when median edge is below 40px, with a minimum of 0.3
+        const scaleFactor = Math.max(0.3, Math.min(1, medianLen / 35));
+        const sz = baseSz * scaleFactor;
+        const d = sz / this.dpr;
 
         ctx.lineCap = 'butt';
         ctx.lineJoin = 'miter';
