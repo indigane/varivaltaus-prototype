@@ -45,6 +45,36 @@ func TestGenerators(t *testing.T) {
 		t.Errorf("Expected some tiles for 4.8.8 octagonal board")
 	}
 
+	board = GenerateTrihexagonalBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for trihexagonal board")
+	}
+
+	board = GenerateTruncatedHexagonalBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for truncated hexagonal board")
+	}
+
+	board = GenerateGreatRhombitrihexagonalBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for great rhombitrihexagonal board")
+	}
+
+	board = GenerateSnubSquareBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for snub square board")
+	}
+
+	board = GenerateSnubTrihexagonalBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for snub trihexagonal board")
+	}
+
+	board = GenerateElongatedTriangularBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for elongated triangular board")
+	}
+
 	board = GenerateVoronoiBoard(opts, "jittered")
 	if len(board.Tiles) != 100 {
 		t.Errorf("Expected 100 tiles for voronoi board, got %d", len(board.Tiles))
