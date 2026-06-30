@@ -4,7 +4,7 @@ Värivaltaus (Finnish for "Color Capture") is a flood-fill strategy game where p
 
 ## Features
 
-- **Diverse Board Types**: Play on Square, Triangle, Hex, Rhombitrihexagonal, Cairo Pentagonal, and Voronoi (Jittered/Random) tilings.
+- **Diverse Board Types**: Play on regular, semi-regular, dual semi-regular, Cairo pentagonal, and Voronoi (Jittered/Random) tilings.
 - **Geometric Masks**: Apply masks like circular or rectangular holes to create unique board shapes.
 - **Configurable Players**: Support for up to 8 players, including human players and various bot strategies.
 - **Bot Strategies**:

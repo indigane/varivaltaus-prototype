@@ -11,6 +11,15 @@ import { generateTruncatedTrihexagonalBoard } from '../tilings/truncated-trihexa
 import { generateSnubSquareBoard } from '../tilings/snub-square.js';
 import { generateSnubTrihexagonalBoard } from '../tilings/snub-trihexagonal.js';
 import { generateElongatedTriangularBoard } from '../tilings/elongated-triangular.js';
+import {
+    generateDeltoidalTrihexagonalBoard,
+    generateFloretPentagonalBoard,
+    generateKisrhombilleBoard,
+    generatePrismaticPentagonalBoard,
+    generateRhombilleBoard,
+    generateTetrakisSquareBoard,
+    generateTriakisTriangularBoard
+} from '../tilings/dual-semi-regular.js';
 import { createRNG } from '../core/rng.js';
 
 export function runTilingTests() {
@@ -33,6 +42,13 @@ export function runTilingTests() {
     testGenerator("Snub Square (3.3.4.3.4)", () => generateSnubSquareBoard(options));
     testGenerator("Snub Trihexagonal (3.3.3.3.6)", () => generateSnubTrihexagonalBoard(options));
     testGenerator("Elongated Triangular (3.3.3.4.4)", () => generateElongatedTriangularBoard(options));
+    testGenerator("Prismatic Pentagonal (V3.3.3.4.4)", () => generatePrismaticPentagonalBoard(options));
+    testGenerator("Floret Pentagonal (V3.3.3.3.6)", () => generateFloretPentagonalBoard(options));
+    testGenerator("Deltoidal Trihexagonal (V3.4.6.4)", () => generateDeltoidalTrihexagonalBoard(options));
+    testGenerator("Rhombille (V3.6.3.6)", () => generateRhombilleBoard(options));
+    testGenerator("Triakis Triangular (V3.12.12)", () => generateTriakisTriangularBoard(options));
+    testGenerator("Kisrhombille (V4.6.12)", () => generateKisrhombilleBoard(options));
+    testGenerator("Tetrakis Square (V4.8.8)", () => generateTetrakisSquareBoard(options));
 
     console.log("Tiling Tests Completed.");
 }
