@@ -210,46 +210,69 @@ export class CanvasRenderer {
             const x2 = e.p2[0] * scale + offsetX;
             const y2 = e.p2[1] * scale + offsetY;
 
-            // Compute edge normal (perpendicular)
+            // Compute edge direction and canonical perpendicular
             const dx = x2 - x1, dy = y2 - y1;
             const len = Math.hypot(dx, dy);
             if (len < 0.1) continue;
-            let nx = -dy / len * d, ny = dx / len * d;
 
-            // Ensure normal points toward tile[0] by checking against its centroid
+            // Canonical perpendicular: always pick the one with nx > 0,
+            // or if nx == 0, the one with ny > 0. This ensures all parallel
+            // edges get the same normal direction regardless of p1/p2 order.
+            let nx = -dy / len * d, ny = dx / len * d;
+            if (nx < 0 || (nx === 0 && ny < 0)) {
+                nx = -nx; ny = -ny;
+            }
+
+            // Directional lighting: light from top-left.
+            // The +normal side's bevel faces outward in direction (nx, ny).
+            // It catches light if dot((nx,ny), (-1,-1)) > 0 → -(nx+ny) > 0.
+            // For edges at exactly 45° where nx+ny=0, use a tie-breaker
+            // based on a secondary axis (nx-ny) for consistent results.
+            const lightAlignment = (nx + ny);
+            const plusSideLit = Math.abs(lightAlignment) > 1e-6 * d
+                ? lightAlignment > 0
+                : (ny - nx) > 0;
+
+            // Determine which tile is on which side of the canonical normal
             const t0pts = tiles[0].points;
             let cx0 = 0, cy0 = 0;
             for (const p of t0pts) { cx0 += p[0]; cy0 += p[1]; }
             cx0 = cx0 / t0pts.length * scale + offsetX;
             cy0 = cy0 / t0pts.length * scale + offsetY;
             const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-            if (nx * (cx0 - mx) + ny * (cy0 - my) < 0) {
-                nx = -nx; ny = -ny;
-            }
+            const tile0OnPlusSide = (nx * (cx0 - mx) + ny * (cy0 - my)) > 0;
 
-            // Directional lighting: light from top-left
-            // tile[0]'s outward normal is (-nx,-ny); faces light if (-nx)(-1)+(-ny)(-1)>0 → nx+ny>0
-            const t0FacesLight = nx + ny > 0;
+            const t0FacesLight = tile0OnPlusSide ? plusSideLit : !plusSideLit;
 
-            // Tile 0 side (+normal direction, inward toward tile[0])
+            // Tile 0 side
             const c0 = this._parseColor(palette[tiles[0].colorId % palette.length]);
             const t0shift = t0FacesLight ? strength * 25 : -strength * 25;
             const col0 = this._shiftLightness(c0, t0shift);
             ctx.strokeStyle = `rgb(${col0[0]},${col0[1]},${col0[2]})`;
             ctx.beginPath();
-            ctx.moveTo(x1 + nx, y1 + ny);
-            ctx.lineTo(x2 + nx, y2 + ny);
+            if (tile0OnPlusSide) {
+                ctx.moveTo(x1 + nx, y1 + ny);
+                ctx.lineTo(x2 + nx, y2 + ny);
+            } else {
+                ctx.moveTo(x1 - nx, y1 - ny);
+                ctx.lineTo(x2 - nx, y2 - ny);
+            }
             ctx.stroke();
 
-            // Tile 1 side (-normal direction) — only for interior edges
+            // Tile 1 side — only for interior edges
             if (tiles.length > 1) {
                 const c1 = this._parseColor(palette[tiles[1].colorId % palette.length]);
                 const t1shift = t0FacesLight ? -strength * 25 : strength * 25;
                 const col1 = this._shiftLightness(c1, t1shift);
                 ctx.strokeStyle = `rgb(${col1[0]},${col1[1]},${col1[2]})`;
                 ctx.beginPath();
-                ctx.moveTo(x1 - nx, y1 - ny);
-                ctx.lineTo(x2 - nx, y2 - ny);
+                if (tile0OnPlusSide) {
+                    ctx.moveTo(x1 - nx, y1 - ny);
+                    ctx.lineTo(x2 - nx, y2 - ny);
+                } else {
+                    ctx.moveTo(x1 + nx, y1 + ny);
+                    ctx.lineTo(x2 + nx, y2 + ny);
+                }
                 ctx.stroke();
             }
         }
