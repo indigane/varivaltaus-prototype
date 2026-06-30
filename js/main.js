@@ -2,6 +2,12 @@ import { createRNG } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
 import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
+import { generateTrihexagonalBoard } from './tilings/trihexagonal.js';
+import { generateTruncatedHexagonalBoard } from './tilings/truncated-hexagonal.js';
+import { generateGreatRhombitrihexagonalBoard } from './tilings/great-rhombitrihexagonal.js';
+import { generateSnubSquareBoard } from './tilings/snub-square.js';
+import { generateSnubTrihexagonalBoard } from './tilings/snub-trihexagonal.js';
+import { generateElongatedTriangularBoard } from './tilings/elongated-triangular.js';
 import { generateRhombitrihexagonalBoard } from './tilings/rhombitrihexagonal.js';
 import { generateCairoPentagonBoard } from './tilings/pentagon.js';
 import { generateOctagonalBoard } from './tilings/octagonal.js';
@@ -98,6 +104,18 @@ function handleStart() {
         board = generateTriangleBoard({ ...commonOptions, cols: adjCols, rows, tileSize: tileSize * 1.2, shape: boardShape === 'triangular' ? 'triangular' : 'rectangular' });
     } else if (boardType === 'hex') {
         board = generateHexBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6, shape: boardShape === 'hexagonal' ? 'hexagonal' : 'rectangular' });
+    } else if (boardType === 'trihexagonal') {
+        board = generateTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6 });
+    } else if (boardType === 'truncated-hexagonal') {
+        board = generateTruncatedHexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
+    } else if (boardType === 'great-rhombitrihexagonal') {
+        board = generateGreatRhombitrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
+    } else if (boardType === 'snub-square') {
+        board = generateSnubSquareBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6 });
+    } else if (boardType === 'snub-trihexagonal') {
+        board = generateSnubTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.5 });
+    } else if (boardType === 'elongated-triangular') {
+        board = generateElongatedTriangularBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.8 });
     } else if (boardType === 'rhombitrihexagonal') {
         board = generateRhombitrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
     } else if (boardType === 'pentagon-cairo') {
