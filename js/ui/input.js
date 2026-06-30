@@ -1,4 +1,4 @@
-import { getPalette } from './palettes.js';
+import { getPalette, getPalettesForCount } from './palettes.js';
 import { isLegalMove } from '../core/rules.js';
 
 // Player-color assignment (light, saturated colors for dark UI badges)
@@ -23,6 +23,28 @@ const CONTROL_LABELS = {
 
 // ─── Public API ──────────────────────────────────────────────
 
+export function updatePaletteOptions(colorCount) {
+    const select = document.getElementById('palette');
+    if (!select) return;
+
+    const currentSelection = select.value;
+    const viablePalettes = getPalettesForCount(colorCount);
+
+    select.innerHTML = '';
+    viablePalettes.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (p.id === currentSelection) opt.selected = true;
+        select.appendChild(opt);
+    });
+
+    // If previous selection is no longer valid, pick the first one
+    if (select.selectedIndex === -1 && select.options.length > 0) {
+        select.selectedIndex = 0;
+    }
+}
+
 export function setupUI(state, onColorSelect, onReset, onStep, onTogglePlay) {
     const setupScreen = document.getElementById('setup-screen');
     const gameScreen  = document.getElementById('game-screen');
@@ -42,6 +64,16 @@ export function setupUI(state, onColorSelect, onReset, onStep, onTogglePlay) {
         gameScreen.hidden = true;
         hideGameOver();
         renderPlayerSetup();
+
+        const colorCountInput = document.getElementById('color-count');
+        if (colorCountInput) {
+            updatePaletteOptions(parseInt(colorCountInput.value));
+            colorCountInput.oninput = (e) => {
+                const val = e.target.value;
+                document.getElementById('color-count-val').textContent = val;
+                updatePaletteOptions(parseInt(val));
+            };
+        }
     }
 
     const resetBtn = document.getElementById('reset-button');
@@ -80,7 +112,7 @@ export function updateStats(state) {
     const scoreboard = document.getElementById('scoreboard');
     scoreboard.innerHTML = '';
 
-    const palette = getPalette(state.paletteId);
+    const palette = getPalette(state.paletteId, state.colorCount);
     const totalTiles = state.board.tiles.length;
     const totalOwned = state.players.reduce((sum, p) => sum + p.score, 0);
 
@@ -269,7 +301,7 @@ function createColorButtons(state, onColorSelect) {
 function buildStripContent(strip, state, player, onColorSelect, isActive, append = false) {
     if (!append) strip.innerHTML = '';
 
-    const palette = getPalette(state.paletteId);
+    const palette = getPalette(state.paletteId, state.colorCount);
 
     // Wrapper for this player's button set
     const wrapper = document.createElement('div');

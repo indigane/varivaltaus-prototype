@@ -43,7 +43,7 @@ func GenerateOctagonalBoard(options Options) core.Board {
 
 			points := make([]core.Point, 8)
 			for i := 0; i < 8; i++ {
-				angle := float64(22.5+45*i) * math.Pi / 180.0
+				angle := (22.5 + 45.0*float64(i)) * math.Pi / 180.0
 				points[i] = core.Point{
 					cx + apothem*math.Cos(angle),
 					cy + apothem*math.Sin(angle),

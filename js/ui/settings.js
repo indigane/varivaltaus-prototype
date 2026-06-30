@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'flood-settings';
 
 const RANGE_IDS = ['board-cols', 'board-rows', 'color-count', 'starting-area-size'];
-const SELECT_IDS = ['board-type', 'board-shape', 'color-restrictions', 'turn-order', 'team-territory'];
+const SELECT_IDS = ['board-type', 'board-shape', 'color-restrictions', 'turn-order', 'team-territory', 'palette'];
 const CHECKBOX_IDS = ['starting-area-buffer', 'allow-same-starting-color', 'enable-teams'];
 const OTHER_IDS = ['speed-slider', 'tile-style', 'emboss-size', 'emboss-opacity', 'gutter-size'];
 

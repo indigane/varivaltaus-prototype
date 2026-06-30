@@ -77,6 +77,7 @@ function handleStart() {
     const tileSize = 25;
     const colorCount = parseInt(document.getElementById('color-count').value);
     const colorRestrictions = document.getElementById('color-restrictions').value;
+    const paletteId = document.getElementById('palette').value;
     const turnOrder = document.getElementById('turn-order').value;
     const teamTerritory = document.getElementById('team-territory').value;
     const tileStyle = document.getElementById('tile-style').value;
@@ -140,7 +141,7 @@ function handleStart() {
         players,
         teams,
         colorCount,
-        paletteId: colorCount <= 6 ? "default-6" : "default-10",
+        paletteId,
         rngSeed: seed,
         rules: {
             winCondition: "mostTiles",
