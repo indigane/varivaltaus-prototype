@@ -167,6 +167,68 @@ function getAvailableStrips() {
     return STRIP_IDS;
 }
 
+/**
+ * Assign strips to players based on proximity of their starting position
+ * to each edge of the board.
+ */
+function assignStripsToPlayers(state, humanPlayers, availableStrips) {
+    const board = state.board;
+
+    // Compute normalized centroid position (0-1) for each human player's starting tile
+    const playerPositions = humanPlayers.map(player => {
+        const startTileId = board.startTileIds[player.id % board.startTileIds.length];
+        const tile = board.tiles[startTileId];
+        let cx = 0, cy = 0;
+        for (const p of tile.points) { cx += p[0]; cy += p[1]; }
+        cx /= tile.points.length;
+        cy /= tile.points.length;
+        // Normalize to 0-1
+        return { player, nx: cx / board.width, ny: cy / board.height };
+    });
+
+    // Map strip IDs to edge distances (lower = closer to that edge)
+    function edgeDistance(nx, ny, stripId) {
+        switch (stripId) {
+            case 'player-strip-bottom': return 1 - ny;  // close to bottom = high y
+            case 'player-strip-top': return ny;          // close to top = low y
+            case 'player-strip-left': return nx;         // close to left = low x
+            case 'player-strip-right': return 1 - nx;   // close to right = high x
+        }
+        return Infinity;
+    }
+
+    // Greedy assignment: for each player, pick the closest available strip
+    const usedStrips = new Set();
+    const assignments = [];
+
+    // Sort players by how strongly they prefer one edge (smallest min distance first)
+    const scored = playerPositions.map(pp => {
+        const dists = availableStrips.map(s => ({ stripId: s, dist: edgeDistance(pp.nx, pp.ny, s) }));
+        dists.sort((a, b) => a.dist - b.dist);
+        return { ...pp, dists };
+    });
+    // Assign players with the strongest preference first
+    scored.sort((a, b) => a.dists[0].dist - b.dists[0].dist);
+
+    for (const pp of scored) {
+        let assigned = false;
+        for (const { stripId } of pp.dists) {
+            if (!usedStrips.has(stripId)) {
+                usedStrips.add(stripId);
+                assignments.push({ player: pp.player, stripId });
+                assigned = true;
+                break;
+            }
+        }
+        // Fallback: if all strips taken, share the closest one
+        if (!assigned) {
+            assignments.push({ player: pp.player, stripId: pp.dists[0].stripId });
+        }
+    }
+
+    return assignments;
+}
+
 function createColorButtons(state, onColorSelect) {
     const humanPlayers = state.players.filter(p => p.control === 'human');
     const hasBots = state.players.some(p => p.control !== 'human');
@@ -190,17 +252,16 @@ function createColorButtons(state, onColorSelect) {
             buildStripContent(strip, state, currentPlayer, onColorSelect, true);
         }
     } else {
-        // Multiple humans: assign each to a strip/side
+        // Multiple humans: assign each to a strip/side closest to their starting position
         const strips = getAvailableStrips();
-        humanPlayers.forEach((player, idx) => {
-            const stripId = strips[idx % strips.length];
+        const assignments = assignStripsToPlayers(state, humanPlayers, strips);
+        assignments.forEach(({ player, stripId }) => {
             const strip = document.getElementById(stripId);
             if (!strip) return;
             strip.hidden = false;
 
-            // If multiple players share a strip, append; otherwise build fresh
             const isActive = player.id === state.currentPlayerId && state.status === 'playing';
-            buildStripContent(strip, state, player, onColorSelect, isActive, humanPlayers.length > strips.length);
+            buildStripContent(strip, state, player, onColorSelect, isActive, assignments.filter(a => a.stripId === stripId).length > 1);
         });
     }
 }
