@@ -40,6 +40,11 @@ func TestGenerators(t *testing.T) {
 		t.Errorf("Expected some tiles for rhombitrihexagonal board")
 	}
 
+	board = GenerateOctagonalBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for 4.8.8 octagonal board")
+	}
+
 	board = GenerateVoronoiBoard(opts, "jittered")
 	if len(board.Tiles) != 100 {
 		t.Errorf("Expected 100 tiles for voronoi board, got %d", len(board.Tiles))
