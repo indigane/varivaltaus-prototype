@@ -6,7 +6,7 @@
 export function generateTrihexagonalBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
   const D = 2 * a; // distance between hexagon centers
-  const distT = 2 * a / Math.sqrt(3); // distance from hex center to triangle center
+  const distT = a * 2 / Math.sqrt(3); // distance from hex center to triangle center
 
   const tiles = [];
   const hexMap = new Map(); // key: "q,r", value: id
@@ -50,7 +50,7 @@ export function generateTrihexagonalBoard(options) {
   }
 
   // Helper to add or get a triangle by position
-  const getTriangle = (cx, cy, angle) => {
+  const getTriangle = (cx, cy, angle, outward) => {
     const key = `${Math.round(cx * 100)},${Math.round(cy * 100)}`;
     if (triangleMap.has(key)) return triangleMap.get(key);
 
@@ -65,6 +65,7 @@ export function generateTrihexagonalBoard(options) {
     const tile = {
       id,
       type: 'triangle',
+      outward: outward,
       colorId: Math.floor(rng() * colorCount),
       ownerId: null,
       points,
@@ -88,7 +89,13 @@ export function generateTrihexagonalBoard(options) {
       const tcx = cx + distT * Math.cos(angleT);
       const tcy = cy + distT * Math.sin(angleT);
 
-      const tId = getTriangle(tcx, tcy, angleT);
+      // A triangle is "outward" if it's attached to only one hex in the grid?
+      // Actually simpler: in 3.6.3.6, around each hex, 3 triangles point "out" from center and 3 point "in" relative to the hex?
+      // No, they all look the same around one hex.
+      // Let's use the user's advice: "non-outward-pointing triangles at the edges"
+      // In a hexagonal grid, "outward" usually means the apex points away from the center of the board.
+
+      const tId = getTriangle(tcx, tcy, angleT, false); // outward flag not used yet
       const triangle = idToTile.get(tId);
 
       if (!hex.neighbors.includes(tId)) hex.neighbors.push(tId);
@@ -96,19 +103,51 @@ export function generateTrihexagonalBoard(options) {
     }
   }
 
-  // 2.5 Edge culling: remove triangles with fewer than 3 neighbors
-  const tilesToKeep = [];
+  // Calculate board center for outward check
+  let avgX = 0, avgY = 0;
+  let count = 0;
+  for (const t of tiles) {
+    if (t.type === 'hex') {
+      const [cx, cy] = getHexCenter(t.q, t.r);
+      avgX += cx; avgY += cy; count++;
+    }
+  }
+  avgX /= count; avgY /= count;
+
+  // 2.5 Edge culling: remove triangles that point outward and have only 1 neighbor
   const removedIds = new Set();
   for (const tile of tiles) {
-    if (tile.type === 'triangle' && tile.neighbors.length < 3) {
-      removedIds.add(tile.id);
-    } else {
-      tilesToKeep.push(tile);
+    if (tile.type === 'triangle' && tile.neighbors.length === 1) {
+       // Check if it points outward.
+       // For a triangle with 1 neighbor (a hex), it points outward if its vertex NOT shared with the hex
+       // is further from the board center than the shared side.
+       const hexId = tile.neighbors[0];
+       const hex = idToTile.get(hexId);
+       const [hcx, hcy] = getHexCenter(hex.q, hex.r);
+
+       // Center of the triangle
+       let tcx = 0, tcy = 0;
+       tile.points.forEach(p => { tcx += p[0]; tcy += p[1]; });
+       tcx /= 3; tcy /= 3;
+
+       // Vector from hex center to triangle center
+       const vhx = tcx - hcx;
+       const vhy = tcy - hcy;
+
+       // Vector from board center to triangle center
+       const vbx = tcx - avgX;
+       const vby = tcy - avgY;
+
+       // If dot product > 0, it's pointing "away" from board center relative to its hex
+       const dot = vhx * vbx + vhy * vby;
+       if (dot > 0) {
+         removedIds.add(tile.id);
+       }
     }
   }
 
   // Update neighbors and re-index
-  const filteredTiles = tilesToKeep.map((tile, index) => {
+  const filteredTiles = tiles.filter(t => !removedIds.has(t.id)).map((tile, index) => {
     tile.neighbors = tile.neighbors.filter(nId => !removedIds.has(nId));
     return tile;
   });
@@ -124,13 +163,11 @@ export function generateTrihexagonalBoard(options) {
     tile.neighbors = tile.neighbors.map(nId => idMap.get(nId));
   });
 
-  const finalTiles = filteredTiles;
-
   // 3. Finalize
   let minX = Infinity, minY = Infinity;
   let maxX = -Infinity, maxY = -Infinity;
 
-  for (const t of tiles) {
+  for (const t of filteredTiles) {
     for (const p of t.points) {
       minX = Math.min(minX, p[0]);
       minY = Math.min(minY, p[1]);
@@ -139,7 +176,7 @@ export function generateTrihexagonalBoard(options) {
     }
   }
 
-  tiles.forEach(t => {
+  filteredTiles.forEach(t => {
     t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
   });
 
@@ -148,14 +185,14 @@ export function generateTrihexagonalBoard(options) {
     hexMap.get(`${cols - 1},0`),
     hexMap.get(`${-Math.floor((rows - 1) / 2)},${rows - 1}`),
     hexMap.get(`${cols - 1 - Math.floor((rows - 1) / 2)},${rows - 1}`)
-  ].filter(id => id !== undefined);
+  ].filter(id => id !== undefined && !removedIds.has(id)).map(id => idMap.get(id));
 
   return {
     version: 1,
     generator: "trihexagonal",
     width: maxX - minX,
     height: maxY - minY,
-    tiles: finalTiles,
-    startTileIds: startTileIds.filter(id => !removedIds.has(id)).map(id => idMap.get(id))
+    tiles: filteredTiles,
+    startTileIds: startTileIds
   };
 }

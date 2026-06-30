@@ -32,6 +32,9 @@ export function generateTruncatedHexagonalBoard(options) {
 
       const points = [];
       for (let i = 0; i < 12; i++) {
+        // Correct rotation for dodecagon in 3.12.12:
+        // sides at 0, 30, 60...
+        // vertices at 15, 45...
         const angle = (30 * i + 15) * Math.PI / 180;
         points.push([cx + R12 * Math.cos(angle), cy + R12 * Math.sin(angle)]);
       }
@@ -86,7 +89,7 @@ export function generateTruncatedHexagonalBoard(options) {
     const dodeca = idToTile.get(dId);
     const [cx, cy] = getDodecaCenter(dodeca.q, dodeca.r);
 
-    // Neighbors: 6 other dodecagons and 6 triangles
+    // Neighbors: 6 other dodecagons
     const directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
     for (const [dq, dr] of directions) {
       const neighborId = dodecaMap.get(`${dodeca.q + dq},${dodeca.r + dr}`);
@@ -97,12 +100,14 @@ export function generateTruncatedHexagonalBoard(options) {
       }
     }
 
+    // Neighbors: 6 triangles
     for (let i = 0; i < 6; i++) {
       const angleT = (60 * i + 30) * Math.PI / 180;
       const tcx = cx + distT * Math.cos(angleT);
       const tcy = cy + distT * Math.sin(angleT);
 
-      const tId = getTriangle(tcx, tcy, angleT + Math.PI);
+      // Triangle rotation should be angleT (same as 3.6.3.6)
+      const tId = getTriangle(tcx, tcy, angleT);
       const triangle = idToTile.get(tId);
 
       if (!dodeca.neighbors.includes(tId)) dodeca.neighbors.push(tId);
@@ -110,19 +115,48 @@ export function generateTruncatedHexagonalBoard(options) {
     }
   }
 
-  // 2.5 Edge culling: remove triangles with fewer than 3 neighbors
-  const tilesToKeep = [];
+  // Calculate board center for outward check
+  let avgX = 0, avgY = 0;
+  let dCount = 0;
+  for (const t of tiles) {
+    if (t.type === 'dodecagon') {
+      const [cx, cy] = getDodecaCenter(t.q, t.r);
+      avgX += cx; avgY += cy; dCount++;
+    }
+  }
+  avgX /= dCount; avgY /= dCount;
+
+  // 2.5 Edge culling: remove triangles that point outward and have few neighbors
   const removedIds = new Set();
   for (const tile of tiles) {
-    if (tile.type === 'triangle' && tile.neighbors.length < 3) {
-      removedIds.add(tile.id);
-    } else {
-      tilesToKeep.push(tile);
+    if (tile.type === 'triangle' && tile.neighbors.length <= 1) {
+       if (tile.neighbors.length === 0) {
+         removedIds.add(tile.id);
+         continue;
+       }
+       const dId = tile.neighbors[0];
+       const dodeca = idToTile.get(dId);
+       const [dcx, dcy] = getDodecaCenter(dodeca.q, dodeca.r);
+
+       let tcx = 0, tcy = 0;
+       tile.points.forEach(p => { tcx += p[0]; tcy += p[1]; });
+       tcx /= 3; tcy /= 3;
+
+       const vdx = tcx - dcx;
+       const vdy = tcy - dcy;
+       const vbx = tcx - avgX;
+       const vby = tcy - avgY;
+
+       const dot = vdx * vbx + vdy * vby;
+       if (dot > 0) {
+         removedIds.add(tile.id);
+       }
     }
   }
 
   // Update neighbors and re-index
   const idMap = new Map();
+  const tilesToKeep = tiles.filter(t => !removedIds.has(t.id));
   const finalTiles = tilesToKeep.map((tile, index) => {
     tile.neighbors = tile.neighbors.filter(nId => !removedIds.has(nId));
     idMap.set(tile.id, index);
@@ -138,7 +172,7 @@ export function generateTruncatedHexagonalBoard(options) {
   let minX = Infinity, minY = Infinity;
   let maxX = -Infinity, maxY = -Infinity;
 
-  for (const t of tiles) {
+  for (const t of finalTiles) {
     for (const p of t.points) {
       minX = Math.min(minX, p[0]);
       minY = Math.min(minY, p[1]);
@@ -147,7 +181,7 @@ export function generateTruncatedHexagonalBoard(options) {
     }
   }
 
-  tiles.forEach(t => {
+  finalTiles.forEach(t => {
     t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
   });
 
@@ -156,7 +190,7 @@ export function generateTruncatedHexagonalBoard(options) {
     dodecaMap.get(`${cols - 1},0`),
     dodecaMap.get(`${-Math.floor((rows - 1) / 2)},${rows - 1}`),
     dodecaMap.get(`${cols - 1 - Math.floor((rows - 1) / 2)},${rows - 1}`)
-  ].filter(id => id !== undefined);
+  ].filter(id => id !== undefined && !removedIds.has(id)).map(id => idMap.get(id));
 
   return {
     version: 1,
@@ -164,6 +198,6 @@ export function generateTruncatedHexagonalBoard(options) {
     width: maxX - minX,
     height: maxY - minY,
     tiles: finalTiles,
-    startTileIds: startTileIds.filter(id => !removedIds.has(id)).map(id => idMap.get(id))
+    startTileIds: startTileIds
   };
 }

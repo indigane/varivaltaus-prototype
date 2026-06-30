@@ -8,16 +8,26 @@ import (
 
 func GenerateTrihexagonalBoard(options Options) core.Board {
 	a := options.TileSize
-	D := 2.0 * a
-	distT := 2.0 * a / math.Sqrt(3.0)
 	cols, rows := options.Cols, options.Rows
 	colorCount := options.ColorCount
 	rng := options.RNG
 
-	tiles := []core.Tile{}
+	D := 2.0 * a
+	distT := 2.0 * a / math.Sqrt(3.0)
+
+	type tileTemp struct {
+		id        int
+		tType     string
+		q, r      int
+		colorId   int
+		points    []core.Point
+		neighbors []int
+	}
+
+	var allTiles []tileTemp
 	hexMap := make(map[string]int)
 	triangleMap := make(map[string]int)
-	idToTileIdx := make(map[int]int)
+	idCounter := 0
 
 	getHexCenter := func(q, r int) (float64, float64) {
 		x := D * (float64(q) + float64(r)/2.0)
@@ -25,11 +35,10 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 		return x, y
 	}
 
-	idCounter := 0
 	// 1. Generate Hexagons
 	for r := 0; r < rows; r++ {
-		rOffset := int(math.Floor(float64(r) / 2.0))
-		for q := -rOffset; q < cols-rOffset; q++ {
+		r_offset := r / 2
+		for q := -r_offset; q < cols-r_offset; q++ {
 			cx, cy := getHexCenter(q, r)
 			id := idCounter
 			idCounter++
@@ -40,22 +49,20 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 				points[i] = core.Point{cx + a*math.Cos(angle), cy + a*math.Sin(angle)}
 			}
 
-			tile := core.Tile{
-				ID:        id,
-				ColorID:   int(rng() * float64(colorCount)),
-				OwnerID:   nil,
-				Points:    points,
-				Neighbors: []int{},
-			}
+			allTiles = append(allTiles, tileTemp{
+				id:      id,
+				tType:   "hex",
+				q:       q,
+				r:       r,
+				colorId: int(rng() * float64(colorCount)),
+				points:  points,
+			})
 			hexMap[fmt.Sprintf("%d,%d", q, r)] = id
-			idToTileIdx[id] = len(tiles)
-			tiles = append(tiles, tile)
 		}
 	}
 
-	// Helper for triangles
 	getTriangle := func(cx, cy, angle float64) int {
-		key := fmt.Sprintf("%d,%d", int(math.Round(cx*100)), int(math.Round(cy*100)))
+		key := fmt.Sprintf("%.2f,%.2f", cx, cy)
 		if id, ok := triangleMap[key]; ok {
 			return id
 		}
@@ -65,101 +72,151 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 		points := make([]core.Point, 3)
 		rT := a / math.Sqrt(3.0)
 		for i := 0; i < 3; i++ {
-			vAngle := angle + (float64(i)*120.0)*math.Pi/180.0
-			points[i] = core.Point{
-				cx + rT*math.Cos(vAngle),
-				cy + rT*math.Sin(vAngle),
-			}
+			vAngle := angle + float64(i*120)*math.Pi/180.0
+			points[i] = core.Point{cx + rT*math.Cos(vAngle), cy + rT*math.Sin(vAngle)}
 		}
 
-		tile := core.Tile{
-			ID:        id,
-			ColorID:   int(rng() * float64(colorCount)),
-			OwnerID:   nil,
-			Points:    points,
-			Neighbors: []int{},
-		}
+		allTiles = append(allTiles, tileTemp{
+			id:      id,
+			tType:   "triangle",
+			colorId: int(rng() * float64(colorCount)),
+			points:  points,
+		})
 		triangleMap[key] = id
-		idToTileIdx[id] = len(tiles)
-		tiles = append(tiles, tile)
 		return id
 	}
 
 	// 2. Build connectivity and generate triangles
-	for key, hId := range hexMap {
-		var q, r int
-		fmt.Sscanf(key, "%d,%d", &q, &r)
-		cx, cy := getHexCenter(q, r)
-		hIdx := idToTileIdx[hId]
+	for i := range allTiles {
+		if allTiles[i].tType == "hex" {
+			cx, cy := getHexCenter(allTiles[i].q, allTiles[i].r)
+			hId := allTiles[i].id
+			for j := 0; j < 6; j++ {
+				angleT := float64(60*j+30) * math.Pi / 180.0
+				tcx := cx + distT*math.Cos(angleT)
+				tcy := cy + distT*math.Sin(angleT)
 
-		for i := 0; i < 6; i++ {
-			angleT := float64(60*i+30) * math.Pi / 180.0
-			tcx := cx + distT*math.Cos(angleT)
-			tcy := cy + distT*math.Sin(angleT)
-			tId := getTriangle(tcx, tcy, angleT)
-			tIdx := idToTileIdx[tId]
+				tId := getTriangle(tcx, tcy, angleT)
 
-			addNeighbor := func(idx1, id2 int) {
+				// Add neighbors (need to find index in allTiles)
+				// This is inefficient but works for small boards
+				var tIdx int
+				for idx, t := range allTiles {
+					if t.id == tId {
+						tIdx = idx
+						break
+					}
+				}
+
 				found := false
-				for _, n := range tiles[idx1].Neighbors {
-					if n == id2 {
+				for _, n := range allTiles[i].neighbors {
+					if n == tId {
 						found = true
 						break
 					}
 				}
 				if !found {
-					tiles[idx1].Neighbors = append(tiles[idx1].Neighbors, id2)
+					allTiles[i].neighbors = append(allTiles[i].neighbors, tId)
+				}
+
+				found = false
+				for _, n := range allTiles[tIdx].neighbors {
+					if n == hId {
+						found = true
+						break
+					}
+				}
+				if !found {
+					allTiles[tIdx].neighbors = append(allTiles[tIdx].neighbors, hId)
 				}
 			}
-
-			addNeighbor(hIdx, tId)
-			addNeighbor(tIdx, hId)
 		}
 	}
 
-	// 2.5 Edge culling: remove triangles with fewer than 3 neighbors
+	// Calculate board center
+	var avgX, avgY float64
+	var count float64
+	for _, t := range allTiles {
+		if t.tType == "hex" {
+			cx, cy := getHexCenter(t.q, t.r)
+			avgX += cx
+			avgY += cy
+			count++
+		}
+	}
+	avgX /= count
+	avgY /= count
+
+	// 2.5 Edge culling
 	removedIds := make(map[int]bool)
-	finalTiles := []core.Tile{}
-	for _, t := range tiles {
-		// Triangles are after hexagons, so we check them by ID or length
-		// A triangle is a triangle if it's in triangleMap
-		isTriangle := false
-		for _, id := range triangleMap {
-			if t.ID == id {
-				isTriangle = true
+	for _, t := range allTiles {
+		if t.tType == "triangle" && len(t.neighbors) == 1 {
+			hexId := t.neighbors[0]
+			var hIdx int
+			for idx, ht := range allTiles {
+				if ht.id == hexId {
+					hIdx = idx
+					break
+				}
+			}
+			hcx, hcy := getHexCenter(allTiles[hIdx].q, allTiles[hIdx].r)
+
+			var tcx, tcy float64
+			for _, p := range t.points {
+				tcx += p[0]
+				tcy += p[1]
+			}
+			tcx /= 3.0
+			tcy /= 3.0
+
+			vhx, vhy := tcx-hcx, tcy-hcy
+			vbx, vby := tcx-avgX, tcy-avgY
+
+			if vhx*vbx+vhy*vby > 0 {
+				removedIds[t.id] = true
+			}
+		} else if t.tType == "triangle" && len(t.neighbors) == 0 {
+			removedIds[t.id] = true
+		}
+	}
+
+	var filteredTiles []core.Tile
+	idMap := make(map[int]int)
+
+	for _, t := range allTiles {
+		if !removedIds[t.id] {
+			idMap[t.id] = len(filteredTiles)
+			filteredTiles = append(filteredTiles, core.Tile{
+				ID:        t.id,
+				ColorID:   t.colorId,
+				Points:    t.points,
+				Neighbors: []int{},
+			})
+		}
+	}
+
+	for i := range filteredTiles {
+		originalID := filteredTiles[i].ID
+		var originalIdx int
+		for idx, t := range allTiles {
+			if t.id == originalID {
+				originalIdx = idx
 				break
 			}
 		}
 
-		if isTriangle && len(t.Neighbors) < 3 {
-			removedIds[t.ID] = true
-		} else {
-			finalTiles = append(finalTiles, t)
-		}
-	}
-
-	// Re-map IDs and update neighbors
-	idMap := make(map[int]int)
-	for i := range finalTiles {
-		oldId := finalTiles[i].ID
-		finalTiles[i].ID = i
-		idMap[oldId] = i
-	}
-
-	for i := range finalTiles {
-		newNeighbors := []int{}
-		for _, nId := range finalTiles[i].Neighbors {
-			if !removedIds[nId] {
-				newNeighbors = append(newNeighbors, idMap[nId])
+		for _, nID := range allTiles[originalIdx].neighbors {
+			if !removedIds[nID] {
+				filteredTiles[i].Neighbors = append(filteredTiles[i].Neighbors, idMap[nID])
 			}
 		}
-		finalTiles[i].Neighbors = newNeighbors
+		filteredTiles[i].ID = idMap[originalID]
 	}
 
 	// 3. Finalize
 	minX, minY := math.MaxFloat64, math.MaxFloat64
 	maxX, maxY := -math.MaxFloat64, -math.MaxFloat64
-	for _, t := range tiles {
+	for _, t := range filteredTiles {
 		for _, p := range t.Points {
 			minX = math.Min(minX, p[0])
 			minY = math.Min(minY, p[1])
@@ -168,30 +225,25 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 		}
 	}
 
-	for i := range tiles {
-		for j := range tiles[i].Points {
-			tiles[i].Points[j][0] -= minX
-			tiles[i].Points[j][1] -= minY
+	for i := range filteredTiles {
+		for j := range filteredTiles[i].Points {
+			filteredTiles[i].Points[j][0] -= minX
+			filteredTiles[i].Points[j][1] -= minY
 		}
 	}
 
 	startTileIds := []int{}
-	corners := []struct{ q, r int }{
-		{0, 0},
-		{cols - 1, 0},
-		{-int(math.Floor(float64(rows-1) / 2.0)), rows - 1},
-		{cols - 1 - int(math.Floor(float64(rows-1)/2.0)), rows - 1},
+	corners := []string{
+		fmt.Sprintf("%d,%d", 0, 0),
+		fmt.Sprintf("%d,%d", cols-1, 0),
+		fmt.Sprintf("%d,%d", -((rows - 1) / 2), rows-1),
+		fmt.Sprintf("%d,%d", cols-1-((rows-1)/2), rows-1),
 	}
 	for _, c := range corners {
-		if id, ok := hexMap[fmt.Sprintf("%d,%d", c.q, c.r)]; ok {
-			startTileIds = append(startTileIds, id)
-		}
-	}
-
-	finalStartTileIds := []int{}
-	for _, id := range startTileIds {
-		if !removedIds[id] {
-			finalStartTileIds = append(finalStartTileIds, idMap[id])
+		if id, ok := hexMap[c]; ok {
+			if !removedIds[id] {
+				startTileIds = append(startTileIds, idMap[id])
+			}
 		}
 	}
 
@@ -202,7 +254,7 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 		Height:       maxY - minY,
 		Cols:         cols,
 		Rows:         rows,
-		Tiles:        finalTiles,
-		StartTileIds: finalStartTileIds,
+		Tiles:        filteredTiles,
+		StartTileIds: startTileIds,
 	}
 }
