@@ -642,6 +642,8 @@ func generateBaseBoard(boardType string, opts tilings.Options) core.Board {
 		return tilings.GenerateCairoPentagonBoard(opts)
 	case "rhombitrihexagonal":
 		return tilings.GenerateRhombitrihexagonalBoard(opts)
+	case "4.8.8":
+		return tilings.GenerateOctagonalBoard(opts)
 	case "voronoi-jittered":
 		return tilings.GenerateVoronoiBoard(opts, "jittered")
 	case "voronoi-random":

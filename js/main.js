@@ -4,6 +4,7 @@ import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
 import { generateRhombitrihexagonalBoard } from './tilings/rhombitrihexagonal.js';
 import { generateCairoPentagonBoard } from './tilings/pentagon.js';
+import { generateOctagonalBoard } from './tilings/octagonal.js';
 import { generateVoronoiBoard } from './tilings/voronoi.js';
 import { applyMask, circularMask } from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
@@ -100,6 +101,8 @@ function handleStart() {
         board = generateRhombitrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
     } else if (boardType === 'pentagon-cairo') {
         board = generateCairoPentagonBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.5 });
+    } else if (boardType === '4.8.8') {
+        board = generateOctagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
     } else if (boardType === 'voronoi-jittered') {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'jittered' });
     } else if (boardType === 'voronoi-random') {
