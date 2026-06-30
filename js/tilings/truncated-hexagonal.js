@@ -1,189 +1,118 @@
+import { validateBoard } from "../core/utils.js";
+
 /**
- * Generates a Truncated Hexagonal tiling board (3.12.12).
- * This tiling consists of dodecagons and triangles.
- * Every vertex is shared by two dodecagons and one triangle.
+ * Truncated Hexagonal Tiling (3.12.12)
  */
 export function generateTruncatedHexagonalBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
-
-  // Distance between centers of dodecagons (sharing a side 'a')
   const dist = a * (2 + Math.sqrt(3));
 
   const tiles = [];
-  const dodecaMap = new Map(); // key: "q,r", value: id
-  const triangleMap = new Map(); // key: "x,y", value: id
-
-  const getDodecaCenter = (q, r) => {
-    const x = dist * (q + r / 2);
-    const y = dist * (Math.sqrt(3) / 2) * r;
-    return [x, y];
-  };
-
-  const idToTile = new Map();
+  const dodecaMap = new Map();
+  const triangleMap = new Map();
   let idCounter = 0;
 
-  // 1. Generate Dodecagons
+  const getDodecaCenter = (q, r) => [dist * (q + r / 2), dist * (Math.sqrt(3) / 2) * r];
   const R12 = a / (2 * Math.sin(Math.PI / 12));
+  const rT = a / Math.sqrt(3);
+  const distT = dist / Math.sqrt(3);
+
   for (let r = 0; r < rows; r++) {
     const r_offset = Math.floor(r / 2);
     for (let q = -r_offset; q < cols - r_offset; q++) {
       const [cx, cy] = getDodecaCenter(q, r);
-      const id = idCounter++;
-
       const points = [];
       for (let i = 0; i < 12; i++) {
-        // Correct rotation for dodecagon in 3.12.12:
-        // sides at 0, 30, 60...
-        // vertices at 15, 45...
         const angle = (30 * i + 15) * Math.PI / 180;
         points.push([cx + R12 * Math.cos(angle), cy + R12 * Math.sin(angle)]);
       }
-
       const tile = {
-        id,
-        type: 'dodecagon',
-        q, r,
-        colorId: Math.floor(rng() * colorCount),
-        ownerId: null,
-        points,
-        neighbors: []
+        id: idCounter++, type: 'dodecagon', q, r,
+        colorId: Math.floor(rng() * colorCount), points, neighbors: []
       };
       tiles.push(tile);
-      dodecaMap.set(`${q},${r}`, id);
-      idToTile.set(id, tile);
+      dodecaMap.set(`${q},${r}`, tile.id);
     }
   }
 
-  // Helper to add or get a triangle by position
-  const getTriangle = (cx, cy, angle) => {
-    const key = `${Math.round(cx * 100)},${Math.round(cy * 100)}`;
-    if (triangleMap.has(key)) return triangleMap.get(key);
-
-    const id = idCounter++;
-    const points = [];
-    const rT = a / Math.sqrt(3);
-    for (let i = 0; i < 3; i++) {
-      const vAngle = angle + (i * 120) * Math.PI / 180;
-      points.push([cx + rT * Math.cos(vAngle), cy + rT * Math.sin(vAngle)]);
-    }
-
-    const tile = {
-      id,
-      type: 'triangle',
-      colorId: Math.floor(rng() * colorCount),
-      ownerId: null,
-      points,
-      neighbors: []
-    };
-    tiles.push(tile);
-    triangleMap.set(key, id);
-    idToTile.set(id, tile);
-    return id;
-  };
-
-  // 2. Build connectivity and generate triangles
-  const dodecaIds = tiles.filter(t => t.type === 'dodecagon').map(t => t.id);
-  const distT = dist / Math.sqrt(3);
-
-  for (const dId of dodecaIds) {
-    const dodeca = idToTile.get(dId);
+  tiles.filter(t => t.type === 'dodecagon').forEach(dodeca => {
     const [cx, cy] = getDodecaCenter(dodeca.q, dodeca.r);
-
-    // Neighbors: 6 other dodecagons
-    const directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
-    for (const [dq, dr] of directions) {
-      const neighborId = dodecaMap.get(`${dodeca.q + dq},${dodeca.r + dr}`);
-      if (neighborId !== undefined) {
-        const neighbor = idToTile.get(neighborId);
-        if (!dodeca.neighbors.includes(neighborId)) dodeca.neighbors.push(neighborId);
-        if (!neighbor.neighbors.includes(dId)) neighbor.neighbors.push(dId);
-      }
-    }
-
-    // Neighbors: 6 triangles
+    // dodeca-dodeca
+    [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]].forEach(([dq, dr]) => {
+      const nId = dodecaMap.get(`${dodeca.q+dq},${dodeca.r+dr}`);
+      if (nId !== undefined && !dodeca.neighbors.includes(nId)) dodeca.neighbors.push(nId);
+    });
+    // dodeca-triangle
     for (let i = 0; i < 6; i++) {
       const angleT = (60 * i + 30) * Math.PI / 180;
       const tcx = cx + distT * Math.cos(angleT);
       const tcy = cy + distT * Math.sin(angleT);
-
-      // Triangle rotation should be angleT (same as 3.6.3.6)
-      const tId = getTriangle(tcx, tcy, angleT);
-      const triangle = idToTile.get(tId);
-
+      const key = `${Math.round(tcx * 100)},${Math.round(tcy * 100)}`;
+      let tId;
+      if (!triangleMap.has(key)) {
+        const triPoints = [];
+        for (let j = 0; j < 3; j++) {
+          const vAngle = angleT + (j * 120) * Math.PI / 180;
+          triPoints.push([tcx + rT * Math.cos(vAngle), tcy + rT * Math.sin(vAngle)]);
+        }
+        const triTile = {
+          id: idCounter++, type: 'triangle', colorId: Math.floor(rng() * colorCount),
+          points: triPoints, neighbors: []
+        };
+        tiles.push(triTile);
+        triangleMap.set(key, triTile.id);
+        tId = triTile.id;
+      } else {
+        tId = triangleMap.get(key);
+      }
       if (!dodeca.neighbors.includes(tId)) dodeca.neighbors.push(tId);
-      if (!triangle.neighbors.includes(dId)) triangle.neighbors.push(dId);
+      if (!tiles[tId].neighbors.includes(dodeca.id)) tiles[tId].neighbors.push(dodeca.id);
     }
-  }
+  });
 
-  // Calculate board center for outward check
-  let avgX = 0, avgY = 0;
-  let dCount = 0;
-  for (const t of tiles) {
-    if (t.type === 'dodecagon') {
-      const [cx, cy] = getDodecaCenter(t.q, t.r);
-      avgX += cx; avgY += cy; dCount++;
-    }
-  }
-  avgX /= dCount; avgY /= dCount;
+  let boardCx = 0, boardCy = 0, dCount = 0;
+  tiles.filter(t => t.type === 'dodecagon').forEach(t => {
+    const [cx, cy] = getDodecaCenter(t.q, t.r);
+    boardCx += cx; boardCy += cy; dCount++;
+  });
+  boardCx /= dCount; boardCy /= dCount;
 
-  // 2.5 Edge culling: remove triangles that point outward and have few neighbors
   const removedIds = new Set();
-  for (const tile of tiles) {
-    if (tile.type === 'triangle' && tile.neighbors.length <= 1) {
-       if (tile.neighbors.length === 0) {
-         removedIds.add(tile.id);
-         continue;
-       }
-       const dId = tile.neighbors[0];
-       const dodeca = idToTile.get(dId);
-       const [dcx, dcy] = getDodecaCenter(dodeca.q, dodeca.r);
+  tiles.filter(t => t.type === 'triangle' && t.neighbors.length <= 1).forEach(tri => {
+    if (tri.neighbors.length === 0) { removedIds.add(tri.id); return; }
+    const dodeca = tiles[tri.neighbors[0]];
+    const [dcx, dcy] = getDodecaCenter(dodeca.q, dodeca.r);
+    const tcx = tri.points.reduce((s, p) => s + p[0], 0) / 3;
+    const tcy = tri.points.reduce((s, p) => s + p[1], 0) / 3;
+    if ((tcx - dcx) * (tcx - boardCx) + (tcy - dcy) * (tcy - boardCy) > 0) removedIds.add(tri.id);
+  });
 
-       let tcx = 0, tcy = 0;
-       tile.points.forEach(p => { tcx += p[0]; tcy += p[1]; });
-       tcx /= 3; tcy /= 3;
-
-       const vdx = tcx - dcx;
-       const vdy = tcy - dcy;
-       const vbx = tcx - avgX;
-       const vby = tcy - avgY;
-
-       const dot = vdx * vbx + vdy * vby;
-       if (dot > 0) {
-         removedIds.add(tile.id);
-       }
-    }
-  }
-
-  // Update neighbors and re-index
+  const filteredTiles = tiles.filter(t => !removedIds.has(t.id));
   const idMap = new Map();
-  const tilesToKeep = tiles.filter(t => !removedIds.has(t.id));
-  const finalTiles = tilesToKeep.map((tile, index) => {
-    tile.neighbors = tile.neighbors.filter(nId => !removedIds.has(nId));
-    idMap.set(tile.id, index);
-    tile.id = index;
-    return tile;
+  filteredTiles.forEach((t, i) => idMap.set(t.id, i));
+  filteredTiles.forEach(t => {
+    t.id = idMap.get(t.id);
+    t.neighbors = t.neighbors.filter(n => !removedIds.has(n)).map(n => idMap.get(n));
   });
 
-  finalTiles.forEach(tile => {
-    tile.neighbors = tile.neighbors.map(nId => idMap.get(nId));
-  });
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  filteredTiles.forEach(t => t.points.forEach(p => {
+    minX = Math.min(minX, p[0]); minY = Math.min(minY, p[1]);
+    maxX = Math.max(maxX, p[0]); maxY = Math.max(maxY, p[1]);
+  }));
+  filteredTiles.forEach(t => t.points.forEach(p => { p[0] -= minX; p[1] -= minY; }));
 
-  // 3. Finalize
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-
-  for (const t of finalTiles) {
-    for (const p of t.points) {
-      minX = Math.min(minX, p[0]);
-      minY = Math.min(minY, p[1]);
-      maxX = Math.max(maxX, p[0]);
-      maxY = Math.max(maxY, p[1]);
-    }
-  }
-
-  finalTiles.forEach(t => {
-    t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
-  });
+  const w = maxX - minX, h = maxY - minY;
+  const findClosest = (tx, ty) => {
+    let bestId = 0, minDist = Infinity;
+    filteredTiles.forEach(t => {
+      const cx = t.points.reduce((s, p) => s + p[0], 0) / t.points.length;
+      const cy = t.points.reduce((s, p) => s + p[1], 0) / t.points.length;
+      const d = Math.pow(cx - tx, 2) + Math.pow(cy - ty, 2);
+      if (d < minDist) { minDist = d; bestId = t.id; }
+    });
+    return bestId;
+  };
 
   const startTileIds = [
     dodecaMap.get(`${0},${0}`),
@@ -192,12 +121,7 @@ export function generateTruncatedHexagonalBoard(options) {
     dodecaMap.get(`${cols - 1 - Math.floor((rows - 1) / 2)},${rows - 1}`)
   ].filter(id => id !== undefined && !removedIds.has(id)).map(id => idMap.get(id));
 
-  return {
-    version: 1,
-    generator: "truncated-hexagonal",
-    width: maxX - minX,
-    height: maxY - minY,
-    tiles: finalTiles,
-    startTileIds: startTileIds
-  };
+  const board = { version: 1, generator: "truncated-hexagonal", width: w, height: h, tiles: filteredTiles, startTileIds };
+  validateBoard(board);
+  return board;
 }

@@ -1,45 +1,28 @@
+import { validateBoard } from "../core/utils.js";
+
 /**
- * Generates a Truncated Trihexagonal tiling board (4.6.12).
- * This tiling consists of dodecagons, hexagons, and squares.
- * Every vertex is shared by one dodecagon, one hexagon, and one square.
+ * Truncated Trihexagonal Tiling (4.6.12)
  */
 export function generateTruncatedTrihexagonalBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
-
-  // Side length 'a' for all polygons.
-  // Distance between centers of dodecagons.
   const dist = a * (3 + Math.sqrt(3));
 
   const tiles = [];
   const tileMap = new Map();
-
-  const getDodecaCenter = (q, r) => {
-    const x = dist * (q + r / 2);
-    const y = dist * (Math.sqrt(3) / 2) * r;
-    return [x, y];
-  };
-
   let idCounter = 0;
+
+  const getDodecaCenter = (q, r) => [dist * (q + r / 2), dist * (Math.sqrt(3) / 2) * r];
 
   const getTile = (cx, cy, sides, angle, radius, prefix) => {
     const key = `${prefix}_${Math.round(cx * 100)},${Math.round(cy * 100)}`;
     if (tileMap.has(key)) return tileMap.get(key);
-
     const id = idCounter++;
     const points = [];
     for (let i = 0; i < sides; i++) {
       const vAngle = (angle + (i * 360 / sides)) * Math.PI / 180;
       points.push([cx + radius * Math.cos(vAngle), cy + radius * Math.sin(vAngle)]);
     }
-
-    const tile = {
-      id,
-      type: prefix,
-      colorId: Math.floor(rng() * colorCount),
-      ownerId: null,
-      points,
-      neighbors: []
-    };
+    const tile = { id, type: prefix, colorId: Math.floor(rng() * colorCount), points, neighbors: [] };
     tiles.push(tile);
     tileMap.set(key, id);
     return id;
@@ -48,134 +31,72 @@ export function generateTruncatedTrihexagonalBoard(options) {
   const R12 = a / (2 * Math.sin(Math.PI / 12));
   const R6 = a;
   const R4 = a / Math.sqrt(2);
-
   const distS = a * (3 + Math.sqrt(3)) / 2;
   const distH = a * (1 + Math.sqrt(3));
-
   const dodecaIds = [];
 
-  // 1. Generate Dodecagons and their surrounding squares and hexagons
-  // We expand the range slightly to ensure the edges are filled, then cull.
   for (let r = -1; r <= rows; r++) {
     const r_offset = Math.floor(r / 2);
     for (let q = -r_offset - 1; q < cols - r_offset + 1; q++) {
       const [cx, cy] = getDodecaCenter(q, r);
-
       const dId = getTile(cx, cy, 12, 15, R12, "d");
-      if (q >= -r_offset && q < cols - r_offset && r >= 0 && r < rows) {
-          dodecaIds.push(dId);
-      }
-
+      if (q >= -r_offset && q < cols - r_offset && r >= 0 && r < rows) dodecaIds.push(dId);
       for (let i = 0; i < 6; i++) {
-        // Squares
-        const angleS = i * 60;
-        const scx = cx + distS * Math.cos(angleS * Math.PI / 180);
-        const scy = cy + distS * Math.sin(angleS * Math.PI / 180);
-        getTile(scx, scy, 4, angleS + 45, R4, "s");
-
-        // Hexagons
-        const angleH = i * 60 + 30;
-        const hcx = cx + distH * Math.cos(angleH * Math.PI / 180);
-        const hcy = cy + distH * Math.sin(angleH * Math.PI / 180);
-        getTile(hcx, hcy, 6, 0, R6, "h");
+        getTile(cx + distS * Math.cos(i * 60 * Math.PI / 180), cy + distS * Math.sin(i * 60 * Math.PI / 180), 4, i * 60 + 45, R4, "s");
+        getTile(cx + distH * Math.cos((i * 60 + 30) * Math.PI / 180), cy + distH * Math.sin((i * 60 + 30) * Math.PI / 180), 6, 0, R6, "h");
       }
     }
   }
 
-  // 2. Build connectivity based on vertex proximity
   const vertexMap = new Map();
-  tiles.forEach(tile => {
-    tile.points.forEach(p => {
-      const vx = Math.round(p[0] * 100);
-      const vy = Math.round(p[1] * 100);
-      const key = `${vx},${vy}`;
-      if (!vertexMap.has(key)) vertexMap.set(key, []);
-      vertexMap.get(key).push(tile.id);
-    });
-  });
+  tiles.forEach(tile => tile.points.forEach(p => {
+    const key = `${Math.round(p[0] * 100)},${Math.round(p[1] * 100)}`;
+    if (!vertexMap.has(key)) vertexMap.set(key, []);
+    vertexMap.get(key).push(tile.id);
+  }));
 
-  const neighborPairs = new Map();
-  vertexMap.forEach(tileIds => {
-    for (let i = 0; i < tileIds.length; i++) {
-      for (let j = i + 1; j < tileIds.length; j++) {
-        const id1 = Math.min(tileIds[i], tileIds[j]);
-        const id2 = Math.max(tileIds[i], tileIds[j]);
-        const key = `${id1},${id2}`;
-        neighborPairs.set(key, (neighborPairs.get(key) || 0) + 1);
+  vertexMap.forEach(ids => {
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const id1 = ids[i], id2 = ids[j];
+        const shared = tiles[id1].points.filter(p1 => {
+           const k1 = `${Math.round(p1[0] * 100)},${Math.round(p1[1] * 100)}`;
+           return tiles[id2].points.some(p2 => `${Math.round(p2[0] * 100)},${Math.round(p2[1] * 100)}` === k1);
+        }).length;
+        if (shared >= 2) {
+          if (!tiles[id1].neighbors.includes(id2)) tiles[id1].neighbors.push(id2);
+          if (!tiles[id2].neighbors.includes(id1)) tiles[id2].neighbors.push(id1);
+        }
       }
     }
   });
 
-  neighborPairs.forEach((count, key) => {
-    if (count >= 2) {
-      const [id1, id2] = key.split(',').map(Number);
-      tiles[id1].neighbors.push(id2);
-      tiles[id2].neighbors.push(id1);
-    }
-  });
-
-  // 3. Culling: Only keep tiles that are "well-connected" or dodecagons within bounds
-  // A cleaner way: filter by a bounding box of dodecagon centers.
   const minCx = 0, maxCx = dist * (cols - 1);
   const minCy = 0, maxCy = dist * (Math.sqrt(3) / 2) * (rows - 1);
-
+  const buffer = a * 1.5;
   const filteredTiles = tiles.filter(tile => {
-     let cx = 0, cy = 0;
-     tile.points.forEach(p => { cx += p[0]; cy += p[1]; });
-     cx /= tile.points.length;
-     cy /= tile.points.length;
-
-     // Relaxed bounds to include surrounding hexagons and squares
-     const buffer = a * 1.5;
-     return cx >= minCx - buffer && cx <= maxCx + buffer &&
-            cy >= minCy - buffer && cy <= maxCy + buffer;
+     const cx = tile.points.reduce((s, p) => s + p[0], 0) / tile.points.length;
+     const cy = tile.points.reduce((s, p) => s + p[1], 0) / tile.points.length;
+     return cx >= minCx - buffer && cx <= maxCx + buffer && cy >= minCy - buffer && cy <= maxCy + buffer;
   });
 
-  // Re-index and update neighbors
   const idMap = new Map();
-  filteredTiles.forEach((tile, i) => {
-    idMap.set(tile.id, i);
+  filteredTiles.forEach((t, i) => idMap.set(t.id, i));
+  filteredTiles.forEach(t => {
+    t.id = idMap.get(t.id);
+    t.neighbors = t.neighbors.filter(n => idMap.has(n)).map(n => idMap.get(n));
   });
 
-  const finalTiles = filteredTiles.map(tile => {
-    const newTile = {
-       ...tile,
-       id: idMap.get(tile.id),
-       neighbors: tile.neighbors.filter(nId => idMap.has(nId)).map(nId => idMap.get(nId))
-    };
-    return newTile;
-  });
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  filteredTiles.forEach(t => t.points.forEach(p => {
+    minX = Math.min(minX, p[0]); minY = Math.min(minY, p[1]);
+    maxX = Math.max(maxX, p[0]); maxY = Math.max(maxY, p[1]);
+  }));
+  filteredTiles.forEach(t => t.points.forEach(p => { p[0] -= minX; p[1] -= minY; }));
 
-  // 4. Finalize
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
+  const startTileIds = [dodecaIds[0], dodecaIds[cols - 1], dodecaIds[(rows - 1) * cols], dodecaIds[dodecaIds.length - 1]].filter(id => id !== undefined && idMap.has(id)).map(id => idMap.get(id));
 
-  for (const t of finalTiles) {
-    for (const p of t.points) {
-      minX = Math.min(minX, p[0]);
-      minY = Math.min(minY, p[1]);
-      maxX = Math.max(maxX, p[0]);
-      maxY = Math.max(maxY, p[1]);
-    }
-  }
-
-  finalTiles.forEach(t => {
-    t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
-  });
-
-  const startTileIds = [
-    dodecaIds[0],
-    dodecaIds[cols - 1],
-    dodecaIds[(rows - 1) * cols],
-    dodecaIds[dodecaIds.length - 1]
-  ].filter(id => id !== undefined && idMap.has(id)).map(id => idMap.get(id));
-
-  return {
-    version: 1,
-    generator: "truncated-trihexagonal",
-    width: maxX - minX,
-    height: maxY - minY,
-    tiles: finalTiles,
-    startTileIds: startTileIds
-  };
+  const board = { version: 1, generator: "truncated-trihexagonal", width: maxX - minX, height: maxY - minY, tiles: filteredTiles, startTileIds };
+  validateBoard(board);
+  return board;
 }

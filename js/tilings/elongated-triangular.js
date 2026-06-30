@@ -1,185 +1,191 @@
+import { getVertexId, validateBoard } from "../core/utils.js";
+
 /**
- * Generates an Elongated Triangular tiling board (3.3.3.4.4).
- * This tiling consists of alternating strips of squares and triangles.
- * Every vertex is shared by two squares and three triangles.
+ * Elongated Triangular Tiling (3.3.3.4.4)
+ * Consists of strips of triangles separated by strips of squares.
  */
 export function generateElongatedTriangularBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
-
-  const h = a * Math.sqrt(3) / 2;
-
-  // We want 'rows' rows of squares, with triangle strips in between.
-  // Total number of strips = rows (squares) + (rows - 1) (triangles)
-  const numSquareRows = rows;
-  const numTriangleRows = rows - 1;
-  const totalStrips = numSquareRows + numTriangleRows;
-
-  let tiles = [];
-  let idCounter = 0;
+  const tiles = [];
   const vertexMap = new Map();
-  const getVertexId = (p) => {
-    const key = `${p[0].toFixed(3)},${p[1].toFixed(3)}`;
-    if (vertexMap.has(key)) return vertexMap.get(key).id;
-    const id = vertexMap.size;
-    vertexMap.set(key, { id, p });
-    return id;
-  };
+  const addedShapes = new Set();
 
-  const squareMap = new Map();
+  const h_tri = (a * Math.sqrt(3)) / 2;
+  const rowHeight = a + h_tri;
 
-  for (let s = 0; s < totalStrips; s++) {
-    const isSquareStrip = (s % 2 === 0);
-    const stripIdx = Math.floor(s / 2);
+  // We want to ensure it starts and ends with squares if possible.
+  // The loop generates one unit (square row + triangle row) per 'r'.
+  // We'll generate r from 0 to rows-1, and then one extra square row.
 
-    // yBase calculation:
-    // s=0 (S): 0
-    // s=1 (T): a
-    // s=2 (S): a + h
-    // s=3 (T): 2a + h
-    // ...
-    const yBase = stripIdx * (a + h) + (isSquareStrip ? 0 : a);
-    const offset = (stripIdx % 2 === 1 && isSquareStrip) ? a / 2 :
-                   (stripIdx % 2 === 0 && !isSquareStrip) ? 0 :
-                   (stripIdx % 2 === 1 && !isSquareStrip) ? a / 2 : 0;
+  for (let r = 0; r < rows; r++) {
+    for (let q = 0; q < cols; q++) {
+      // 1. Squares
+      let sx = q * a + (r % 2 === 1 ? a / 2 : 0);
+      let sy = r * rowHeight;
 
-    // Actually simpler:
-    // Square Row 0 (strip 0): offset 0
-    // Square Row 1 (strip 2): offset a/2
-    // Square Row 2 (strip 4): offset 0
-    const currentSquareOffset = (stripIdx % 2 === 0) ? 0 : a / 2;
-    const nextSquareOffset = ((stripIdx + 1) % 2 === 0) ? 0 : a / 2;
-
-    if (isSquareStrip) {
-      for (let q = 0; q < cols; q++) {
-        const x = q * a + currentSquareOffset;
-        const y = yBase;
-        const points = [
-          [x, y],
-          [x + a, y],
-          [x + a, y + a],
-          [x, y + a]
-        ];
-        const vIds = points.map(getVertexId);
-        const tile = {
-          id: idCounter++,
+      const sqPoints = [
+        [sx, sy],
+        [sx + a, sy],
+        [sx + a, sy + a],
+        [sx, sy + a],
+      ];
+      const sqVIds = sqPoints.map((p) => getVertexId(p, vertexMap));
+      const sqKey = "s" + [...sqVIds].sort((a, b) => a - b).join(",");
+      if (!addedShapes.has(sqKey)) {
+        addedShapes.add(sqKey);
+        tiles.push({
+          id: tiles.length,
           colorId: Math.floor(rng() * colorCount),
-          ownerId: null,
-          points,
-          vIds,
+          points: sqPoints,
+          vIds: sqVIds,
           neighbors: []
-        };
-        tiles.push(tile);
-        squareMap.set(`${q},${stripIdx}`, tile.id);
-      }
-    } else {
-      // Triangles between Square strip 'stripIdx' and 'stripIdx + 1'
-      const offsetBelow = currentSquareOffset;
-      const offsetAbove = nextSquareOffset;
-
-      for (let q = -1; q < cols + 1; q++) {
-        const xBelow = q * a + offsetBelow;
-        const xAbove = q * a + offsetAbove;
-
-        // Up triangle
-        // If offsetBelow=0, offsetAbove=0.5a: vertices at yBase: q*a, (q+1)*a. Apex at yBase+h: (q+0.5)a
-        // If offsetBelow=0.5a, offsetAbove=0: vertices at yBase: (q+0.5)a, (q+1.5)a. Apex at yBase+h: (q+1)a
-        const apexUpX = (offsetBelow < offsetAbove) ? xAbove : xAbove + a;
-        const pUp = [
-          [xBelow, yBase],
-          [xBelow + a, yBase],
-          [apexUpX, yBase + h]
-        ];
-
-        // Down triangle
-        // If offsetBelow=0, offsetAbove=0.5a: vertices at yBase+h: (q+0.5)a, (q+1.5)a. Apex at yBase: (q+1)a
-        // If offsetBelow=0.5a, offsetAbove=0: vertices at yBase+h: q*a, (q+1)a. Apex at yBase: (q+0.5)a
-        const apexDownX = (offsetBelow < offsetAbove) ? xBelow + a : xBelow;
-        const pDown = [
-          [xAbove, yBase + h],
-          [xAbove + a, yBase + h],
-          [apexDownX, yBase]
-        ];
-
-        [pUp, pDown].forEach(points => {
-          tiles.push({
-            id: idCounter++,
-            colorId: Math.floor(rng() * colorCount),
-            ownerId: null,
-            points,
-            vIds: points.map(getVertexId),
-            neighbors: []
-          });
         });
       }
+
+      // 2. Triangles (only if not the very last row, to end with squares)
+      // Actually, if we want to end with squares, we just don't add triangles after the last square row.
+      if (r < rows - 1) {
+        let tx = q * a + (r % 2 === 1 ? a / 2 : 0);
+        let ty = r * rowHeight + a;
+
+        // Tri 1 (Up)
+        const tri1Points = [
+          [tx, ty],
+          [tx + a, ty],
+          [tx + a / 2, ty + h_tri],
+        ];
+        const tri1VIds = tri1Points.map((p) => getVertexId(p, vertexMap));
+        const tri1Key = "t" + [...tri1VIds].sort((a, b) => a - b).join(",");
+        if (!addedShapes.has(tri1Key)) {
+          addedShapes.add(tri1Key);
+          tiles.push({
+            id: tiles.length,
+            colorId: Math.floor(rng() * colorCount),
+            points: tri1Points,
+            vIds: tri1VIds,
+            neighbors: []
+          });
+        }
+
+        // Tri 2 (Down) - need to handle offset
+        const tri2Points = [
+          [tx + a / 2, ty + h_tri],
+          [tx + 3 * (a / 2), ty + h_tri],
+          [tx + a, ty],
+        ];
+        const tri2VIds = tri2Points.map((p) => getVertexId(p, vertexMap));
+        const tri2Key = "t" + [...tri2VIds].sort((a, b) => a - b).join(",");
+        if (!addedShapes.has(tri2Key)) {
+          addedShapes.add(tri2Key);
+          tiles.push({
+            id: tiles.length,
+            colorId: Math.floor(rng() * colorCount),
+            points: tri2Points,
+            vIds: tri2VIds,
+            neighbors: []
+          });
+        }
+
+        // Extra Tri 2 to the left for odd rows
+        if (q === 0) {
+           const triLPoints = [
+             [tx - a / 2, ty + h_tri],
+             [tx + a / 2, ty + h_tri],
+             [tx, ty]
+           ];
+           const triLVIds = triLPoints.map(p => getVertexId(p, vertexMap));
+           const triLKey = "t" + [...triLVIds].sort((a,b)=>a-b).join(",");
+           if (!addedShapes.has(triLKey)) {
+             addedShapes.add(triLKey);
+             tiles.push({
+               id: tiles.length,
+               colorId: Math.floor(rng() * colorCount),
+               points: triLPoints,
+               vIds: triLVIds,
+               neighbors: []
+             });
+           }
+        }
+      }
     }
   }
 
-  // Finalize: Filter by horizontal bounds and build connectivity
-  const minX_all = Math.min(...Array.from(vertexMap.values()).map(v => v.p[0]));
-  const targetWidth = cols * a;
-
-  const filteredTiles = tiles.filter(t => {
-    const centroidX = t.points.reduce((sum, p) => sum + p[0], 0) / t.points.length;
-    // Use a small epsilon to include the leftmost squares which might be exactly at minX_all
-    return centroidX >= minX_all - 0.1 && centroidX <= minX_all + targetWidth;
-  });
-
-  // Re-index
-  filteredTiles.forEach((t, idx) => t.id = idx);
-
-  // Connectivity via vIds
-  const vertexToTiles = new Map();
-  filteredTiles.forEach((tile, idx) => {
-    tile.vIds.forEach(vId => {
-      if (!vertexToTiles.has(vId)) vertexToTiles.set(vId, []);
-      vertexToTiles.get(vId).push(idx);
+  // Connectivity
+  const vertexToTiles = [];
+  tiles.forEach((tile) => {
+    tile.vIds.forEach((vId) => {
+      if (!vertexToTiles[vId]) vertexToTiles[vId] = [];
+      vertexToTiles[vId].push(tile.id);
     });
   });
 
-  filteredTiles.forEach((tile, i) => {
-    const neighborCounts = new Map();
+  tiles.forEach((tile) => {
+    const counts = new Map();
     tile.vIds.forEach(vId => {
-      vertexToTiles.get(vId).forEach(j => {
-        if (i === j) return;
-        neighborCounts.set(j, (neighborCounts.get(j) || 0) + 1);
+      vertexToTiles[vId].forEach(otherId => {
+        if (otherId === tile.id) return;
+        counts.set(otherId, (counts.get(otherId) || 0) + 1);
       });
     });
-    neighborCounts.forEach((count, j) => {
-      if (count >= 2) {
-        tile.neighbors.push(filteredTiles[j].id);
-      }
+    counts.forEach((count, otherId) => {
+      if (count >= 2) tile.neighbors.push(otherId);
     });
   });
 
-  // Final bounding box and normalization
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-  for (const t of filteredTiles) {
-    for (const p of t.points) {
-      minX = Math.min(minX, p[0]);
-      minY = Math.min(minY, p[1]);
-      maxX = Math.max(maxX, p[0]);
-      maxY = Math.max(maxY, p[1]);
-    }
-  }
-
-  filteredTiles.forEach(t => {
-    t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
+  // Finalize bounds
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  tiles.forEach((t) => {
+    t.points.forEach((p) => {
+      if (p[0] < minX) minX = p[0];
+      if (p[1] < minY) minY = p[1];
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] > maxY) maxY = p[1];
+    });
   });
 
-  const startTileIds = [
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all, 0])))?.id,
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all + targetWidth, 0])))?.id,
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all, (rows - 1) * (a + h)])))?.id,
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all + targetWidth, (rows - 1) * (a + h)])))?.id
-  ].filter(id => id !== undefined);
+  tiles.forEach((t) => {
+    t.points.forEach((p) => {
+      p[0] -= minX;
+      p[1] -= minY;
+    });
+  });
 
-  return {
+  const width = maxX - minX;
+  const height = maxY - minY;
+
+  const findClosest = (tx, ty) => {
+    let bestId = 0;
+    let minDist = Infinity;
+    tiles.forEach((t) => {
+      const cx = t.points.reduce((sum, p) => sum + p[0], 0) / t.points.length;
+      const cy = t.points.reduce((sum, p) => sum + p[1], 0) / t.points.length;
+      const d = Math.pow(cx - tx, 2) + Math.pow(cy - ty, 2);
+      if (d < minDist) {
+        minDist = d;
+        bestId = t.id;
+      }
+    });
+    return bestId;
+  };
+
+  const startTileIds = [
+    findClosest(0, 0),
+    findClosest(width, 0),
+    findClosest(0, height),
+    findClosest(width, height),
+  ];
+
+  const board = {
     version: 1,
     generator: "elongated-triangular",
-    width: maxX - minX,
-    height: maxY - minY,
-    tiles: filteredTiles,
-    startTileIds: startTileIds.length > 0 ? startTileIds : [0, filteredTiles.length - 1]
+    width,
+    height,
+    cols,
+    rows,
+    tiles,
+    startTileIds,
   };
+
+  validateBoard(board);
+  return board;
 }

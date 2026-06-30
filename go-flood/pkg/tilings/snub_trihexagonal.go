@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-flood/pkg/core"
 	"math"
+	"sort"
 )
 
 func GenerateSnubTrihexagonalBoard(options Options) core.Board {
@@ -15,15 +16,9 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 	rng := options.RNG
 
 	tiles := []core.Tile{}
-	hexMap := make(map[string]int)
-
-	getHexCenter := func(q, r int) (float64, float64) {
-		x := D * (float64(q) + float64(r)/2.0)
-		y := D * (math.Sqrt(3.0) / 2.0) * float64(r)
-		return x, y
-	}
-
+	addedShapes := make(map[string]bool)
 	idCounter := 0
+
 	type vertexInfo struct {
 		id int
 		p  core.Point
@@ -39,20 +34,24 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 		return id
 	}
 
-	// 1. Generate Hexagons
+	getHexCenter := func(q, r int) (float64, float64) {
+		x := D * (float64(q) + float64(r)/2.0)
+		y := D * (math.Sqrt(3.0) / 2.0) * float64(r)
+		return x, y
+	}
+
 	type vTile struct {
 		id   int
 		vIds []int
 	}
 	var vTiles []vTile
 
-	for r := 0; r < rows; r++ {
+	// 1. Generate Hexagons (wider range)
+	qPad, rPad := 2, 2
+	for r := -rPad; r < rows+rPad; r++ {
 		rOffset := int(math.Floor(float64(r) / 2.0))
-		for q := -rOffset; q < cols-rOffset; q++ {
+		for q := -rOffset - qPad; q < cols-rOffset+qPad; q++ {
 			cx, cy := getHexCenter(q, r)
-			id := idCounter
-			idCounter++
-
 			points := make([]core.Point, 6)
 			vIds := make([]int, 6)
 			for i := 0; i < 6; i++ {
@@ -62,25 +61,28 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 				vIds[i] = getVertexId(p)
 			}
 
-			tiles = append(tiles, core.Tile{
-				ID:        id,
-				ColorID:   int(rng() * float64(colorCount)),
-				OwnerID:   nil,
-				Points:    points,
-				Neighbors: []int{},
-			})
-			vTiles = append(vTiles, vTile{id, vIds})
-			hexMap[fmt.Sprintf("%d,%d", q, r)] = id
+			vIdsSorted := make([]int, 6)
+			copy(vIdsSorted, vIds)
+			sort.Ints(vIdsSorted)
+			key := fmt.Sprintf("h%v", vIdsSorted)
+			if !addedShapes[key] {
+				addedShapes[key] = true
+				tiles = append(tiles, core.Tile{
+					ID:      idCounter,
+					ColorID: int(rng() * float64(colorCount)),
+					Points:  points,
+				})
+				vTiles = append(vTiles, vTile{idCounter, vIds})
+				idCounter++
+			}
 		}
 	}
 
 	// 2. Generate Triangles
-	var allVertices []core.Point
 	verticesById := make([]core.Point, len(vertexMap))
 	for _, info := range vertexMap {
 		verticesById[info.id] = info.p
 	}
-	allVertices = verticesById
 
 	distSq := func(p1, p2 core.Point) float64 {
 		dx := p1[0] - p2[0]
@@ -89,20 +91,21 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 	}
 
 	targetSq := a * a
-	tolerance := 0.1 * targetSq
+	tolerance := 0.05 * targetSq
 
+	cellSize := a * 1.5
 	type cell struct{ x, y int }
 	grid := make(map[cell][]int)
 	getCell := func(p core.Point) cell {
-		return cell{int(math.Floor(p[0] / a)), int(math.Floor(p[1] / a))}
+		return cell{int(math.Floor(p[0] / cellSize)), int(math.Floor(p[1] / cellSize))}
 	}
-	for i, v := range allVertices {
+	for i, v := range verticesById {
 		c := getCell(v)
 		grid[c] = append(grid[c], i)
 	}
 
-	for i := 0; i < len(allVertices); i++ {
-		v1 := allVertices[i]
+	for i := 0; i < len(verticesById); i++ {
+		v1 := verticesById[i]
 		c1 := getCell(v1)
 
 		for dx := -1; dx <= 1; dx++ {
@@ -112,7 +115,7 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 					if j <= i {
 						continue
 					}
-					v2 := allVertices[j]
+					v2 := verticesById[j]
 					if math.Abs(distSq(v1, v2)-targetSq) < tolerance {
 						for dx2 := -1; dx2 <= 1; dx2++ {
 							for dy2 := -1; dy2 <= 1; dy2++ {
@@ -121,18 +124,23 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 									if k <= j {
 										continue
 									}
-									v3 := allVertices[k]
+									v3 := verticesById[k]
 									if math.Abs(distSq(v1, v3)-targetSq) < tolerance && math.Abs(distSq(v2, v3)-targetSq) < tolerance {
-										id := idCounter
-										idCounter++
-										tiles = append(tiles, core.Tile{
-											ID:        id,
-											ColorID:   int(rng() * float64(colorCount)),
-											OwnerID:   nil,
-											Points:    []core.Point{v1, v2, v3},
-											Neighbors: []int{},
-										})
-										vTiles = append(vTiles, vTile{id, []int{i, j, k}})
+										vIds := []int{i, j, k}
+										vIdsSorted := make([]int, 3)
+										copy(vIdsSorted, vIds)
+										sort.Ints(vIdsSorted)
+										key := fmt.Sprintf("t%v", vIdsSorted)
+										if !addedShapes[key] {
+											addedShapes[key] = true
+											tiles = append(tiles, core.Tile{
+												ID:      idCounter,
+												ColorID: int(rng() * float64(colorCount)),
+												Points:  []core.Point{v1, v2, v3},
+											})
+											vTiles = append(vTiles, vTile{idCounter, vIds})
+											idCounter++
+										}
 									}
 								}
 							}
@@ -143,17 +151,39 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 		}
 	}
 
-	// 3. Optimized Connectivity
-	vertexToTiles := make([][]int, len(allVertices))
-	for tileIdx, vt := range vTiles {
+	// 3. Filter and Finalize
+	var filteredTiles []core.Tile
+	var filteredVTiles []vTile
+	maxXHex := (float64(cols) - 0.5) * D
+	maxYHex := (float64(rows) - 0.5) * D * math.Sqrt(3.0) / 2.0
+
+	for i, t := range tiles {
+		var cx, cy float64
+		for _, p := range t.Points {
+			cx += p[0]
+			cy += p[1]
+		}
+		cx /= float64(len(t.Points))
+		cy /= float64(len(t.Points))
+
+		if cx >= -a && cx <= maxXHex && cy >= -a && cy <= maxYHex {
+			t.ID = len(filteredTiles)
+			filteredTiles = append(filteredTiles, t)
+			filteredVTiles = append(filteredVTiles, vTiles[i])
+		}
+	}
+
+	// Connectivity
+	vertexToTiles := make([][]int, len(vertexMap))
+	for tileIdx, vt := range filteredVTiles {
 		for _, vId := range vt.vIds {
 			vertexToTiles[vId] = append(vertexToTiles[vId], tileIdx)
 		}
 	}
 
-	for i := range tiles {
+	for i := range filteredTiles {
 		neighborCounts := make(map[int]int)
-		for _, vId := range vTiles[i].vIds {
+		for _, vId := range filteredVTiles[i].vIds {
 			for _, j := range vertexToTiles[vId] {
 				if i == j {
 					continue
@@ -163,15 +193,14 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 		}
 		for j, count := range neighborCounts {
 			if count >= 2 {
-				tiles[i].Neighbors = append(tiles[i].Neighbors, tiles[j].ID)
+				filteredTiles[i].Neighbors = append(filteredTiles[i].Neighbors, filteredTiles[j].ID)
 			}
 		}
 	}
 
-	// 4. Finalize
 	minX, minY := math.MaxFloat64, math.MaxFloat64
 	maxX, maxY := -math.MaxFloat64, -math.MaxFloat64
-	for _, t := range tiles {
+	for _, t := range filteredTiles {
 		for _, p := range t.Points {
 			minX = math.Min(minX, p[0])
 			minY = math.Min(minY, p[1])
@@ -180,34 +209,49 @@ func GenerateSnubTrihexagonalBoard(options Options) core.Board {
 		}
 	}
 
-	for i := range tiles {
-		for j := range tiles[i].Points {
-			tiles[i].Points[j][0] -= minX
-			tiles[i].Points[j][1] -= minY
+	for i := range filteredTiles {
+		for j := range filteredTiles[i].Points {
+			filteredTiles[i].Points[j][0] -= minX
+			filteredTiles[i].Points[j][1] -= minY
 		}
 	}
 
-	startTileIds := []int{}
-	corners := []struct{ q, r int }{
-		{0, 0},
-		{cols - 1, 0},
-		{-int(math.Floor(float64(rows-1) / 2.0)), rows - 1},
-		{cols - 1 - int(math.Floor(float64(rows-1)/2.0)), rows - 1},
-	}
-	for _, c := range corners {
-		if id, ok := hexMap[fmt.Sprintf("%d,%d", c.q, c.r)]; ok {
-			startTileIds = append(startTileIds, id)
+	w, h := maxX-minX, maxY-minY
+	findClosest := func(tx, ty float64) int {
+		bestId := 0
+		minDist := math.MaxFloat64
+		for _, t := range filteredTiles {
+			var cx, cy float64
+			for _, p := range t.Points {
+				cx += p[0]
+				cy += p[1]
+			}
+			cx /= float64(len(t.Points))
+			cy /= float64(len(t.Points))
+			d := math.Pow(cx-tx, 2) + math.Pow(cy-ty, 2)
+			if d < minDist {
+				minDist = d
+				bestId = t.ID
+			}
 		}
+		return bestId
+	}
+
+	startTileIds := []int{
+		findClosest(0, 0),
+		findClosest(w, 0),
+		findClosest(0, h),
+		findClosest(w, h),
 	}
 
 	return core.Board{
 		Version:      1,
 		Generator:    "snub-trihexagonal",
-		Width:        maxX - minX,
-		Height:       maxY - minY,
+		Width:        w,
+		Height:       h,
 		Cols:         cols,
 		Rows:         rows,
-		Tiles:        tiles,
+		Tiles:        filteredTiles,
 		StartTileIds: startTileIds,
 	}
 }

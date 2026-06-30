@@ -1,132 +1,119 @@
+import { getVertexId, distanceSq } from "../core/utils.js";
+
 /**
- * Generates a Snub Square tiling board (3.3.4.3.4).
- * This tiling consists of squares and triangles.
- * Every vertex is shared by two squares and three triangles.
+ * Snub Square Tiling (3.3.4.3.4)
  */
 export function generateSnubSquareBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
-
-  // Lattice constant for snub square (3.3.4.3.4)
   const D = a * Math.sqrt(2 + Math.sqrt(3));
   const alpha = 15 * Math.PI / 180;
 
   const tiles = [];
-  const startTileIds = [];
-
-  let idCounter = 0;
+  const addedShapes = new Set();
   const vertexMap = new Map();
-  const getVertexId = (p) => {
-    const key = `${p[0].toFixed(3)},${p[1].toFixed(3)}`;
-    if (vertexMap.has(key)) return vertexMap.get(key).id;
-    const id = vertexMap.size;
-    vertexMap.set(key, { id, p });
-    return id;
-  };
+  const squareCentroids = [];
+  let idCounter = 0;
 
   const Rsq = a / Math.sqrt(2);
 
-  // 1. Generate Squares
-  // There are two orientations of squares in the snub square tiling.
-  for (let r = -1; r <= rows; r++) {
-    for (let q = -1; q <= cols; q++) {
-      // Set 1: At (D*q, D*r) with rotation alpha
-      const cx1 = D * q;
-      const cy1 = D * r;
-
-      // Set 2: At (D*(q+0.5), D*(r+0.5)) with rotation -alpha (or alpha + 90?)
-      // Actually the snub square has all squares same rotation?
-      // No, let's check: in s{4,4} squares are rotated by alpha.
-      // Wait, the Wikipedia image shows all squares have same orientation relative to the lattice.
-      // BUT if I only place them at (D*q, D*r), there are huge gaps.
-      // The other set of squares is at (D*(q+0.5), D*(r+0.5))
-
+  // Generate Squares in a grid
+  for (let r = -2; r <= rows + 1; r++) {
+    for (let q = -2; q <= cols + 1; q++) {
       const centers = [
-        { x: cx1, y: cy1, rot: alpha },
-        { x: D * (q + 0.5), y: D * (r + 0.5), rot: alpha }
+        { x: D * q, y: D * r },
+        { x: D * (q + 0.5), y: D * (r + 0.5) }
       ];
 
       for (const center of centers) {
         const points = [];
         const vIds = [];
         for (let i = 0; i < 4; i++) {
-          const vAngle = center.rot + Math.PI / 4 + i * Math.PI / 2;
+          const vAngle = alpha + Math.PI / 4 + i * Math.PI / 2;
           const p = [center.x + Rsq * Math.cos(vAngle), center.y + Rsq * Math.sin(vAngle)];
           points.push(p);
-          vIds.push(getVertexId(p));
+          vIds.push(getVertexId(p, vertexMap));
         }
 
-        // Only add if within roughly [0, cols*D] x [0, rows*D]
-        const centroidX = center.x;
-        const centroidY = center.y;
-
-        if (centroidX >= -D/2 && centroidX <= (cols-0.5)*D && centroidY >= -D/2 && centroidY <= (rows-0.5)*D) {
-          const id = idCounter++;
+        const shapeKey = "s" + [...vIds].sort((a, b) => a - b).join(',');
+        if (!addedShapes.has(shapeKey)) {
+          addedShapes.add(shapeKey);
           tiles.push({
-            id,
+            id: idCounter++,
             colorId: Math.floor(rng() * colorCount),
-            ownerId: null,
             points,
             vIds,
             neighbors: []
           });
-          if (q >= 0 && q < cols && r >= 0 && r < rows) {
-             // Candidates for start tiles
-          }
+          squareCentroids.push(center);
         }
       }
     }
   }
 
-  // 2. Generate Triangles by finding equilateral triplets among deduplicated vertices
-  const allVertices = Array.from(vertexMap.values()).map(v => v.p);
-  const distSq = (p1, p2) => {
-    const dx = p1[0] - p2[0];
-    const dy = p1[1] - p2[1];
-    return dx * dx + dy * dy;
+  const allVertices = Array.from(vertexMap.entries()).map(([key, id]) => {
+    const [x, y] = key.split(',').map(Number);
+    return { p: [x, y], id };
+  });
+
+  const grid = new Map();
+  const cellSize = a * 1.5;
+  allVertices.forEach(v => {
+    const key = `${Math.floor(v.p[0] / cellSize)},${Math.floor(v.p[1] / cellSize)}`;
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(v);
+  });
+
+  const isPointInSquare = (px, py, cx, cy) => {
+    const dx = px - cx, dy = py - cy;
+    const lx = dx * Math.cos(-alpha) - dy * Math.sin(-alpha);
+    const ly = dx * Math.sin(-alpha) + dy * Math.cos(-alpha);
+    const half = a / 2 - 0.01 * a;
+    return Math.abs(lx) < half && Math.abs(ly) < half;
   };
 
   const targetSq = a * a;
-  const tolerance = 0.1 * targetSq;
+  const tolerance = 0.05 * targetSq;
 
-  const grid = new Map();
-  const getCellKey = (p) => `${Math.floor(p[0] / a)},${Math.floor(p[1] / a)}`;
-  allVertices.forEach((v, idx) => {
-    const key = getCellKey(v);
-    if (!grid.has(key)) grid.set(key, []);
-    grid.get(key).push(idx);
-  });
-
+  // Find Triangles
   for (let i = 0; i < allVertices.length; i++) {
     const v1 = allVertices[i];
-    const cx = Math.floor(v1[0] / a);
-    const cy = Math.floor(v1[1] / a);
+    const gx = Math.floor(v1.p[0] / cellSize);
+    const gy = Math.floor(v1.p[1] / cellSize);
 
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        const cell2 = grid.get(`${cx + dx},${cy + dy}`);
+        const cell2 = grid.get(`${gx + dx},${gy + dy}`);
         if (!cell2) continue;
-        for (const j of cell2) {
-          if (j <= i) continue;
-          const v2 = allVertices[j];
-          if (Math.abs(distSq(v1, v2) - targetSq) < tolerance) {
+        for (const v2 of cell2) {
+          if (v2.id <= v1.id) continue;
+          if (Math.abs(distanceSq(v1.p, v2.p) - targetSq) < tolerance) {
             for (let dx2 = -1; dx2 <= 1; dx2++) {
               for (let dy2 = -1; dy2 <= 1; dy2++) {
-                const cell3 = grid.get(`${cx + dx2},${cy + dy2}`);
+                const cell3 = grid.get(`${gx + dx2},${gy + dy2}`);
                 if (!cell3) continue;
-                for (const k of cell3) {
-                  if (k <= j) continue;
-                  const v3 = allVertices[k];
-                  if (Math.abs(distSq(v1, v3) - targetSq) < tolerance && Math.abs(distSq(v2, v3) - targetSq) < tolerance) {
-                    const centroidX = (v1[0] + v2[0] + v3[0]) / 3;
-                    const centroidY = (v1[1] + v2[1] + v3[1]) / 3;
+                for (const v3 of cell3) {
+                  if (v3.id <= v2.id) continue;
+                  if (Math.abs(distanceSq(v1.p, v3.p) - targetSq) < tolerance && Math.abs(distanceSq(v2.p, v3.p) - targetSq) < tolerance) {
+                    const tx = (v1.p[0] + v2.p[0] + v3.p[0]) / 3;
+                    const ty = (v1.p[1] + v2.p[1] + v3.p[1]) / 3;
 
-                    if (centroidX >= -D/2 && centroidX <= (cols-0.5)*D && centroidY >= -D/2 && centroidY <= (rows-0.5)*D) {
+                    let overlapping = false;
+                    for (const sc of squareCentroids) {
+                      if (isPointInSquare(tx, ty, sc.x, sc.y)) {
+                        overlapping = true; break;
+                      }
+                    }
+                    if (overlapping) continue;
+
+                    const vIds = [v1.id, v2.id, v3.id].sort((a, b) => a - b);
+                    const shapeKey = "t" + vIds.join(',');
+                    if (!addedShapes.has(shapeKey)) {
+                      addedShapes.add(shapeKey);
                       tiles.push({
                         id: idCounter++,
                         colorId: Math.floor(rng() * colorCount),
-                        ownerId: null,
-                        points: [v1, v2, v3],
-                        vIds: [i, j, k],
+                        points: [v1.p, v2.p, v3.p],
+                        vIds,
                         neighbors: []
                       });
                     }
@@ -140,77 +127,56 @@ export function generateSnubSquareBoard(options) {
     }
   }
 
-  // 3. Optimized Connectivity
-  const vertexToTiles = new Map();
-  tiles.forEach((tile, idx) => {
+  const filteredTiles = tiles.filter(t => {
+    const cx = t.points.reduce((s, p) => s + p[0], 0) / t.points.length;
+    const cy = t.points.reduce((s, p) => s + p[1], 0) / t.points.length;
+    return cx >= -a/2 && cx <= (cols - 0.5) * D && cy >= -a/2 && cy <= (rows - 0.5) * D;
+  });
+  filteredTiles.forEach((t, idx) => t.id = idx);
+
+  const vertexToTiles = [];
+  filteredTiles.forEach(tile => {
     tile.vIds.forEach(vId => {
-      if (!vertexToTiles.has(vId)) vertexToTiles.set(vId, []);
-      vertexToTiles.get(vId).push(idx);
+      if (!vertexToTiles[vId]) vertexToTiles[vId] = [];
+      vertexToTiles[vId].push(tile.id);
     });
   });
 
-  tiles.forEach((tile, i) => {
-    const neighborCounts = new Map();
+  filteredTiles.forEach(tile => {
+    const counts = new Map();
     tile.vIds.forEach(vId => {
-      vertexToTiles.get(vId).forEach(j => {
-        if (i === j) return;
-        neighborCounts.set(j, (neighborCounts.get(j) || 0) + 1);
+      vertexToTiles[vId].forEach(otherId => {
+        if (otherId === tile.id) return;
+        counts.set(otherId, (counts.get(otherId) || 0) + 1);
       });
     });
-    neighborCounts.forEach((count, j) => {
-      if (count >= 2) {
-        tile.neighbors.push(tiles[j].id);
-      }
+    counts.forEach((count, otherId) => {
+      if (count >= 2) tile.neighbors.push(otherId);
     });
   });
 
-  // 4. Finalize
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-  for (const t of tiles) {
-    for (const p of t.points) {
-      minX = Math.min(minX, p[0]);
-      minY = Math.min(minY, p[1]);
-      maxX = Math.max(maxX, p[0]);
-      maxY = Math.max(maxY, p[1]);
-    }
-  }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  filteredTiles.forEach(t => t.points.forEach(p => {
+    minX = Math.min(minX, p[0]); minY = Math.min(minY, p[1]);
+    maxX = Math.max(maxX, p[0]); maxY = Math.max(maxY, p[1]);
+  }));
+  filteredTiles.forEach(t => t.points.forEach(p => { p[0] -= minX; p[1] -= minY; }));
 
-  tiles.forEach(t => {
-    t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
-  });
-
-  // Pick start tiles from corners
+  const w = maxX - minX, h = maxY - minY;
   const findClosest = (tx, ty) => {
-    let bestId = 0;
-    let minDist = Infinity;
-    tiles.forEach(t => {
-      let cx = 0, cy = 0;
-      t.points.forEach(p => { cx += p[0]; cy += p[1]; });
-      cx /= t.points.length;
-      cy /= t.points.length;
+    let bestId = 0, minDist = Infinity;
+    filteredTiles.forEach(t => {
+      const cx = t.points.reduce((s, p) => s + p[0], 0) / t.points.length;
+      const cy = t.points.reduce((s, p) => s + p[1], 0) / t.points.length;
       const d = Math.pow(cx - tx, 2) + Math.pow(cy - ty, 2);
-      if (d < minDist) {
-        minDist = d;
-        bestId = t.id;
-      }
+      if (d < minDist) { minDist = d; bestId = t.id; }
     });
     return bestId;
   };
 
-  const w = maxX - minX;
-  const h = maxY - minY;
-  startTileIds.push(findClosest(0, 0));
-  startTileIds.push(findClosest(w, 0));
-  startTileIds.push(findClosest(0, h));
-  startTileIds.push(findClosest(w, h));
-
   return {
-    version: 1,
-    generator: "snub-square",
-    width: w,
-    height: h,
-    tiles,
-    startTileIds
+    version: 1, generator: "snub-square", width: w, height: h,
+    tiles: filteredTiles,
+    startTileIds: [findClosest(0, 0), findClosest(w, 0), findClosest(0, h), findClosest(w, h)]
   };
 }
