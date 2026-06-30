@@ -96,7 +96,7 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 			angleT := float64(60*i+30) * math.Pi / 180.0
 			tcx := cx + distT*math.Cos(angleT)
 			tcy := cy + distT*math.Sin(angleT)
-			tId := getTriangle(tcx, tcy, angleT+math.Pi)
+			tId := getTriangle(tcx, tcy, angleT)
 			tIdx := idToTileIdx[tId]
 
 			addNeighbor := func(idx1, id2 int) {
@@ -115,6 +115,45 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 			addNeighbor(hIdx, tId)
 			addNeighbor(tIdx, hId)
 		}
+	}
+
+	// 2.5 Edge culling: remove triangles with fewer than 3 neighbors
+	removedIds := make(map[int]bool)
+	finalTiles := []core.Tile{}
+	for _, t := range tiles {
+		// Triangles are after hexagons, so we check them by ID or length
+		// A triangle is a triangle if it's in triangleMap
+		isTriangle := false
+		for _, id := range triangleMap {
+			if t.ID == id {
+				isTriangle = true
+				break
+			}
+		}
+
+		if isTriangle && len(t.Neighbors) < 3 {
+			removedIds[t.ID] = true
+		} else {
+			finalTiles = append(finalTiles, t)
+		}
+	}
+
+	// Re-map IDs and update neighbors
+	idMap := make(map[int]int)
+	for i := range finalTiles {
+		oldId := finalTiles[i].ID
+		finalTiles[i].ID = i
+		idMap[oldId] = i
+	}
+
+	for i := range finalTiles {
+		newNeighbors := []int{}
+		for _, nId := range finalTiles[i].Neighbors {
+			if !removedIds[nId] {
+				newNeighbors = append(newNeighbors, idMap[nId])
+			}
+		}
+		finalTiles[i].Neighbors = newNeighbors
 	}
 
 	// 3. Finalize
@@ -149,6 +188,13 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 		}
 	}
 
+	finalStartTileIds := []int{}
+	for _, id := range startTileIds {
+		if !removedIds[id] {
+			finalStartTileIds = append(finalStartTileIds, idMap[id])
+		}
+	}
+
 	return core.Board{
 		Version:      1,
 		Generator:    "trihexagonal",
@@ -156,7 +202,7 @@ func GenerateTrihexagonalBoard(options Options) core.Board {
 		Height:       maxY - minY,
 		Cols:         cols,
 		Rows:         rows,
-		Tiles:        tiles,
-		StartTileIds: startTileIds,
+		Tiles:        finalTiles,
+		StartTileIds: finalStartTileIds,
 	}
 }

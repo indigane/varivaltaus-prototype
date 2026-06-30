@@ -6,7 +6,7 @@ import (
 	"math"
 )
 
-func GenerateGreatRhombitrihexagonalBoard(options Options) core.Board {
+func GenerateTruncatedTrihexagonalBoard(options Options) core.Board {
 	a := options.TileSize
 	// Distance between dodecagon centers
 	dist := a * (3.0 + math.Sqrt(3.0))
@@ -35,7 +35,7 @@ func GenerateGreatRhombitrihexagonalBoard(options Options) core.Board {
 		idCounter++
 		points := make([]core.Point, sides)
 		for i := 0; i < sides; i++ {
-			vAngle := angle + (float64(i)*360.0/float64(sides))*math.Pi/180.0
+			vAngle := angle*math.Pi/180.0 + (float64(i)*2.0*math.Pi/float64(sides))
 			points[i] = core.Point{cx + radius*math.Cos(vAngle), cy + radius*math.Sin(vAngle)}
 		}
 
@@ -81,12 +81,13 @@ func GenerateGreatRhombitrihexagonalBoard(options Options) core.Board {
 				angleH := float64(i*60 + 30)
 				hcx := cx + distH*math.Cos(angleH*math.Pi/180.0)
 				hcy := cy + distH*math.Sin(angleH*math.Pi/180.0)
-				getTile(hcx, hcy, 6, angleH, R6, "h")
+				// Corrected hexagon rotation: 0 (side aligned with dodecagon)
+				getTile(hcx, hcy, 6, 0, R6, "h")
 			}
 		}
 	}
 
-	// 2. Build connectivity based on vertex proximity
+	// 2. Build connectivity based on vertex proximity (optimized with spatial hash)
 	addNeighbor := func(idx1, id2 int) {
 		for _, n := range tiles[idx1].Neighbors {
 			if n == id2 {
@@ -96,23 +97,34 @@ func GenerateGreatRhombitrihexagonalBoard(options Options) core.Board {
 		tiles[idx1].Neighbors = append(tiles[idx1].Neighbors, id2)
 	}
 
-	for i := 0; i < len(tiles); i++ {
-		for j := i + 1; j < len(tiles); j++ {
-			common := 0
-			for _, p1 := range tiles[i].Points {
-				for _, p2 := range tiles[j].Points {
-					dx := p1[0] - p2[0]
-					dy := p1[1] - p2[1]
-					if dx*dx+dy*dy < 0.01 { // Strict tolerance for a
-						common++
-						break
-					}
+	vertexMap := make(map[string][]int)
+	for _, t := range tiles {
+		for _, p := range t.Points {
+			key := fmt.Sprintf("%d,%d", int(math.Round(p[0]*100)), int(math.Round(p[1]*100)))
+			vertexMap[key] = append(vertexMap[key], t.ID)
+		}
+	}
+
+	neighborCounts := make(map[string]int)
+	for _, tileIds := range vertexMap {
+		for i := 0; i < len(tileIds); i++ {
+			for j := i + 1; j < len(tileIds); j++ {
+				id1, id2 := tileIds[i], tileIds[j]
+				if id1 > id2 {
+					id1, id2 = id2, id1
 				}
+				key := fmt.Sprintf("%d,%d", id1, id2)
+				neighborCounts[key]++
 			}
-			if common >= 2 {
-				addNeighbor(i, tiles[j].ID)
-				addNeighbor(j, tiles[i].ID)
-			}
+		}
+	}
+
+	for key, count := range neighborCounts {
+		if count >= 2 {
+			var id1, id2 int
+			fmt.Sscanf(key, "%d,%d", &id1, &id2)
+			addNeighbor(id1, id2)
+			addNeighbor(id2, id1)
 		}
 	}
 
@@ -146,7 +158,7 @@ func GenerateGreatRhombitrihexagonalBoard(options Options) core.Board {
 
 	return core.Board{
 		Version:      1,
-		Generator:    "great-rhombitrihexagonal",
+		Generator:    "truncated-trihexagonal",
 		Width:        maxX - minX,
 		Height:       maxY - minY,
 		Cols:         cols,

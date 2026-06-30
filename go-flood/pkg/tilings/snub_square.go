@@ -8,8 +8,8 @@ import (
 
 func GenerateSnubSquareBoard(options Options) core.Board {
 	a := options.TileSize
-	// Lattice constant for snub square tiling
-	D := a * math.Sqrt(1.0+math.Sqrt(3.0))
+	// Lattice constant for snub square (3.3.4.3.4) where squares share vertices
+	D := a * math.Sqrt(2.0+math.Sqrt(3.0))
 	alpha := 15.0 * math.Pi / 180.0
 	cols, rows := options.Cols, options.Rows
 	colorCount := options.ColorCount
@@ -23,10 +23,30 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 	}
 
 	idCounter := 0
-	var allVertices []core.Point
+	type vertexInfo struct {
+		id int
+		p  core.Point
+	}
+	vertexMap := make(map[string]vertexInfo)
+	getVertexId := func(p core.Point) int {
+		key := fmt.Sprintf("%.3f,%.3f", p[0], p[1])
+		if info, ok := vertexMap[key]; ok {
+			return info.id
+		}
+		id := len(vertexMap)
+		vertexMap[key] = vertexInfo{id, p}
+		return id
+	}
 
 	// 1. Generate Squares
 	Rsq := a / math.Sqrt(2.0)
+	// Track vIds for connectivity
+	type vTile struct {
+		id   int
+		vIds []int
+	}
+	var vTiles []vTile
+
 	for r := 0; r < rows; r++ {
 		for q := 0; q < cols; q++ {
 			cx, cy := getSquareCenter(q, r)
@@ -34,26 +54,34 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 			idCounter++
 
 			points := make([]core.Point, 4)
+			vIds := make([]int, 4)
 			for i := 0; i < 4; i++ {
-				// Vertices of square rotated by alpha
 				vAngle := alpha + math.Pi/4.0 + float64(i)*math.Pi/2.0
-				points[i] = core.Point{cx + Rsq*math.Cos(vAngle), cy + Rsq*math.Sin(vAngle)}
-				allVertices = append(allVertices, points[i])
+				p := core.Point{cx + Rsq*math.Cos(vAngle), cy + Rsq*math.Sin(vAngle)}
+				points[i] = p
+				vIds[i] = getVertexId(p)
 			}
 
-			tile := core.Tile{
+			tiles = append(tiles, core.Tile{
 				ID:        id,
 				ColorID:   int(rng() * float64(colorCount)),
 				OwnerID:   nil,
 				Points:    points,
 				Neighbors: []int{},
-			}
+			})
+			vTiles = append(vTiles, vTile{id, vIds})
 			squareMap[fmt.Sprintf("%d,%d", q, r)] = id
-			tiles = append(tiles, tile)
 		}
 	}
 
-	// 2. Generate Triangles by finding equilateral triplets among square vertices
+	// 2. Generate Triangles
+	var allVertices []core.Point
+	verticesById := make([]core.Point, len(vertexMap))
+	for _, info := range vertexMap {
+		verticesById[info.id] = info.p
+	}
+	allVertices = verticesById
+
 	distSq := func(p1, p2 core.Point) float64 {
 		dx := p1[0] - p2[0]
 		dy := p1[1] - p2[1]
@@ -63,7 +91,6 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 	targetSq := a * a
 	tolerance := 0.1 * targetSq
 
-	// Spatial hash for vertices
 	type cell struct{ x, y int }
 	grid := make(map[cell][]int)
 	getCell := func(p core.Point) cell {
@@ -86,8 +113,7 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 						continue
 					}
 					v2 := allVertices[j]
-					d12 := distSq(v1, v2)
-					if math.Abs(d12-targetSq) < tolerance {
+					if math.Abs(distSq(v1, v2)-targetSq) < tolerance {
 						for dx2 := -1; dx2 <= 1; dx2++ {
 							for dy2 := -1; dy2 <= 1; dy2++ {
 								c3 := cell{c1.x + dx2, c1.y + dy2}
@@ -96,19 +122,17 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 										continue
 									}
 									v3 := allVertices[k]
-									d13 := distSq(v1, v3)
-									d23 := distSq(v2, v3)
-									if math.Abs(d13-targetSq) < tolerance && math.Abs(d23-targetSq) < tolerance {
-										// Found triangle!
+									if math.Abs(distSq(v1, v3)-targetSq) < tolerance && math.Abs(distSq(v2, v3)-targetSq) < tolerance {
 										id := idCounter
 										idCounter++
 										tiles = append(tiles, core.Tile{
-											ID:      id,
-											ColorID: int(rng() * float64(colorCount)),
-											OwnerID: nil,
-											Points:  []core.Point{v1, v2, v3},
+											ID:        id,
+											ColorID:   int(rng() * float64(colorCount)),
+											OwnerID:   nil,
+											Points:    []core.Point{v1, v2, v3},
 											Neighbors: []int{},
 										})
+										vTiles = append(vTiles, vTile{id, []int{i, j, k}})
 									}
 								}
 							}
@@ -119,32 +143,27 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 		}
 	}
 
-	// 3. Build connectivity based on vertex proximity
-	addNeighbor := func(idx1, id2 int) {
-		for _, n := range tiles[idx1].Neighbors {
-			if n == id2 {
-				return
-			}
+	// 3. Optimized Connectivity
+	vertexToTiles := make([][]int, len(allVertices))
+	for tileIdx, vt := range vTiles {
+		for _, vId := range vt.vIds {
+			vertexToTiles[vId] = append(vertexToTiles[vId], tileIdx)
 		}
-		tiles[idx1].Neighbors = append(tiles[idx1].Neighbors, id2)
 	}
 
-	for i := 0; i < len(tiles); i++ {
-		for j := i + 1; j < len(tiles); j++ {
-			common := 0
-			for _, p1 := range tiles[i].Points {
-				for _, p2 := range tiles[j].Points {
-					dx := p1[0] - p2[0]
-					dy := p1[1] - p2[1]
-					if dx*dx+dy*dy < 0.01 {
-						common++
-						break
-					}
+	for i := range tiles {
+		neighborCounts := make(map[int]int)
+		for _, vId := range vTiles[i].vIds {
+			for _, j := range vertexToTiles[vId] {
+				if i == j {
+					continue
 				}
+				neighborCounts[j]++
 			}
-			if common >= 2 {
-				addNeighbor(i, tiles[j].ID)
-				addNeighbor(j, tiles[i].ID)
+		}
+		for j, count := range neighborCounts {
+			if count >= 2 {
+				tiles[i].Neighbors = append(tiles[i].Neighbors, tiles[j].ID)
 			}
 		}
 	}

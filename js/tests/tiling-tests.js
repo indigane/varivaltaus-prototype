@@ -4,6 +4,13 @@ import { generateTriangleBoard } from '../tilings/triangle.js';
 import { generateHexBoard } from '../tilings/hex.js';
 import { generateRhombitrihexagonalBoard } from '../tilings/rhombitrihexagonal.js';
 import { generateCairoPentagonBoard } from '../tilings/pentagon.js';
+import { generateOctagonalBoard } from '../tilings/octagonal.js';
+import { generateTrihexagonalBoard } from '../tilings/trihexagonal.js';
+import { generateTruncatedHexagonalBoard } from '../tilings/truncated-hexagonal.js';
+import { generateTruncatedTrihexagonalBoard } from '../tilings/truncated-trihexagonal.js';
+import { generateSnubSquareBoard } from '../tilings/snub-square.js';
+import { generateSnubTrihexagonalBoard } from '../tilings/snub-trihexagonal.js';
+import { generateElongatedTriangularBoard } from '../tilings/elongated-triangular.js';
 import { createRNG } from '../core/rng.js';
 
 export function runTilingTests() {
@@ -19,6 +26,13 @@ export function runTilingTests() {
     testGenerator("Hex Hex", () => generateHexBoard({ ...options, shape: "hexagonal" }));
     testGenerator("Rhombitrihexagonal", () => generateRhombitrihexagonalBoard(options));
     testGenerator("Pentagon Cairo", () => generateCairoPentagonBoard(options));
+    testGenerator("Octagonal (4.8.8)", () => generateOctagonalBoard(options));
+    testGenerator("Trihexagonal (3.6.3.6)", () => generateTrihexagonalBoard(options));
+    testGenerator("Truncated Hexagonal (3.12.12)", () => generateTruncatedHexagonalBoard(options));
+    testGenerator("Truncated Trihexagonal (4.6.12)", () => generateTruncatedTrihexagonalBoard(options));
+    testGenerator("Snub Square (3.3.4.3.4)", () => generateSnubSquareBoard(options));
+    testGenerator("Snub Trihexagonal (3.3.3.3.6)", () => generateSnubTrihexagonalBoard(options));
+    testGenerator("Elongated Triangular (3.3.3.4.4)", () => generateElongatedTriangularBoard(options));
 
     console.log("Tiling Tests Completed.");
 }

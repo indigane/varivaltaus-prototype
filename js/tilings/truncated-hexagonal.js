@@ -6,22 +6,8 @@
 export function generateTruncatedHexagonalBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
 
-  // Dodecagon apothem
-  const r12 = (a / 2) * (2 + Math.sqrt(3));
-  // Distance between centers of dodecagons
-  const D = 2 * r12 + a; // Not quite.
-
-  // In a truncated hexagonal tiling, dodecagons are at the positions of hexagons in a hex tiling.
-  // The distance between centers of adjacent dodecagons is a * (1 + sqrt(3))?
-  // No, let's use the property that it's a truncated hexagonal tiling.
-  // Hexagon side L. Truncate it by 'x' from each vertex.
-  // New side lengths are L - 2x and x * sqrt(2)? No, for regular dodecagon, all sides equal 'a'.
-  // L - 2x = a
-  // x / cos(30) ... no.
-
-  // Let's use the distance between centers of dodecagons:
-  // D = a * (2 + Math.sqrt(3))
-  const dist = a * (1 + Math.sqrt(3));
+  // Distance between centers of dodecagons (sharing a side 'a')
+  const dist = a * (2 + Math.sqrt(3));
 
   const tiles = [];
   const dodecaMap = new Map(); // key: "q,r", value: id
@@ -124,6 +110,30 @@ export function generateTruncatedHexagonalBoard(options) {
     }
   }
 
+  // 2.5 Edge culling: remove triangles with fewer than 3 neighbors
+  const tilesToKeep = [];
+  const removedIds = new Set();
+  for (const tile of tiles) {
+    if (tile.type === 'triangle' && tile.neighbors.length < 3) {
+      removedIds.add(tile.id);
+    } else {
+      tilesToKeep.push(tile);
+    }
+  }
+
+  // Update neighbors and re-index
+  const idMap = new Map();
+  const finalTiles = tilesToKeep.map((tile, index) => {
+    tile.neighbors = tile.neighbors.filter(nId => !removedIds.has(nId));
+    idMap.set(tile.id, index);
+    tile.id = index;
+    return tile;
+  });
+
+  finalTiles.forEach(tile => {
+    tile.neighbors = tile.neighbors.map(nId => idMap.get(nId));
+  });
+
   // 3. Finalize
   let minX = Infinity, minY = Infinity;
   let maxX = -Infinity, maxY = -Infinity;
@@ -153,7 +163,7 @@ export function generateTruncatedHexagonalBoard(options) {
     generator: "truncated-hexagonal",
     width: maxX - minX,
     height: maxY - minY,
-    tiles,
-    startTileIds
+    tiles: finalTiles,
+    startTileIds: startTileIds.filter(id => !removedIds.has(id)).map(id => idMap.get(id))
   };
 }
