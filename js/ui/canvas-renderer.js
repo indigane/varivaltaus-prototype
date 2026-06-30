@@ -11,8 +11,8 @@ export class CanvasRenderer {
     }
 
     render(state) {
-        const { board, paletteId } = state;
-        const palette = getPalette(paletteId);
+        const { board, paletteId, colorCount } = state;
+        const palette = getPalette(paletteId, colorCount);
         const tileStyle = state.tileStyle || 'flat';
 
         this.fitToContainer(board);
