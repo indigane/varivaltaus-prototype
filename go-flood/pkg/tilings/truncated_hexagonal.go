@@ -8,7 +8,7 @@ import (
 
 func GenerateTruncatedHexagonalBoard(options Options) core.Board {
 	a := options.TileSize
-	dist := a * (1.0 + math.Sqrt(3.0))
+	dist := a * (2.0 + math.Sqrt(3.0))
 	cols, rows := options.Cols, options.Rows
 	colorCount := options.ColorCount
 	rng := options.RNG
@@ -128,6 +128,42 @@ func GenerateTruncatedHexagonalBoard(options Options) core.Board {
 		}
 	}
 
+	// 2.5 Edge culling: remove triangles with fewer than 3 neighbors
+	removedIds := make(map[int]bool)
+	finalTiles := []core.Tile{}
+	for _, t := range tiles {
+		isTriangle := false
+		for _, id := range triangleMap {
+			if t.ID == id {
+				isTriangle = true
+				break
+			}
+		}
+		if isTriangle && len(t.Neighbors) < 3 {
+			removedIds[t.ID] = true
+		} else {
+			finalTiles = append(finalTiles, t)
+		}
+	}
+
+	// Re-map IDs and update neighbors
+	idMap := make(map[int]int)
+	for i := range finalTiles {
+		oldId := finalTiles[i].ID
+		finalTiles[i].ID = i
+		idMap[oldId] = i
+	}
+
+	for i := range finalTiles {
+		newNeighbors := []int{}
+		for _, nId := range finalTiles[i].Neighbors {
+			if !removedIds[nId] {
+				newNeighbors = append(newNeighbors, idMap[nId])
+			}
+		}
+		finalTiles[i].Neighbors = newNeighbors
+	}
+
 	// 3. Finalize
 	minX, minY := math.MaxFloat64, math.MaxFloat64
 	maxX, maxY := -math.MaxFloat64, -math.MaxFloat64
@@ -160,6 +196,13 @@ func GenerateTruncatedHexagonalBoard(options Options) core.Board {
 		}
 	}
 
+	finalStartTileIds := []int{}
+	for _, id := range startTileIds {
+		if !removedIds[id] {
+			finalStartTileIds = append(finalStartTileIds, idMap[id])
+		}
+	}
+
 	return core.Board{
 		Version:      1,
 		Generator:    "truncated-hexagonal",
@@ -167,7 +210,7 @@ func GenerateTruncatedHexagonalBoard(options Options) core.Board {
 		Height:       maxY - minY,
 		Cols:         cols,
 		Rows:         rows,
-		Tiles:        tiles,
-		StartTileIds: startTileIds,
+		Tiles:        finalTiles,
+		StartTileIds: finalStartTileIds,
 	}
 }

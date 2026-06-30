@@ -88,22 +88,43 @@ export function generateTrihexagonalBoard(options) {
       const tcx = cx + distT * Math.cos(angleT);
       const tcy = cy + distT * Math.sin(angleT);
 
-      // Triangle orientation:
-      // Triangle at 30 deg should have vertices at 30+120=150, 30-120=-90, and 30+0=30? No.
-      // The shared vertices are at 60*i and 60*(i+1).
-      // For i=0, vertices are 0 and 60.
-      // Center is at 30 deg, distT.
-      // Vector from center to vertex 0: (a, 0) - (distT cos 30, distT sin 30) = (a - a, 0 - a/sqrt(3)) = (0, -a/sqrt(3)).
-      // Angle is -90 degrees.
-      // So triangle vertices are at -90, 30, 150.
-
-      const tId = getTriangle(tcx, tcy, angleT + Math.PI);
+      const tId = getTriangle(tcx, tcy, angleT);
       const triangle = idToTile.get(tId);
 
       if (!hex.neighbors.includes(tId)) hex.neighbors.push(tId);
       if (!triangle.neighbors.includes(hId)) triangle.neighbors.push(hId);
     }
   }
+
+  // 2.5 Edge culling: remove triangles with fewer than 3 neighbors
+  const tilesToKeep = [];
+  const removedIds = new Set();
+  for (const tile of tiles) {
+    if (tile.type === 'triangle' && tile.neighbors.length < 3) {
+      removedIds.add(tile.id);
+    } else {
+      tilesToKeep.push(tile);
+    }
+  }
+
+  // Update neighbors and re-index
+  const filteredTiles = tilesToKeep.map((tile, index) => {
+    tile.neighbors = tile.neighbors.filter(nId => !removedIds.has(nId));
+    return tile;
+  });
+
+  // Re-map IDs to be contiguous
+  const idMap = new Map();
+  filteredTiles.forEach((tile, i) => {
+    idMap.set(tile.id, i);
+  });
+
+  filteredTiles.forEach(tile => {
+    tile.id = idMap.get(tile.id);
+    tile.neighbors = tile.neighbors.map(nId => idMap.get(nId));
+  });
+
+  const finalTiles = filteredTiles;
 
   // 3. Finalize
   let minX = Infinity, minY = Infinity;
@@ -134,7 +155,7 @@ export function generateTrihexagonalBoard(options) {
     generator: "trihexagonal",
     width: maxX - minX,
     height: maxY - minY,
-    tiles,
-    startTileIds
+    tiles: finalTiles,
+    startTileIds: startTileIds.filter(id => !removedIds.has(id)).map(id => idMap.get(id))
   };
 }

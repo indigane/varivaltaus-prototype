@@ -4,7 +4,7 @@ import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
 import { generateTrihexagonalBoard } from './tilings/trihexagonal.js';
 import { generateTruncatedHexagonalBoard } from './tilings/truncated-hexagonal.js';
-import { generateGreatRhombitrihexagonalBoard } from './tilings/great-rhombitrihexagonal.js';
+import { generateTruncatedTrihexagonalBoard } from './tilings/truncated-trihexagonal.js';
 import { generateSnubSquareBoard } from './tilings/snub-square.js';
 import { generateSnubTrihexagonalBoard } from './tilings/snub-trihexagonal.js';
 import { generateElongatedTriangularBoard } from './tilings/elongated-triangular.js';
@@ -107,8 +107,8 @@ function handleStart() {
         board = generateTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6 });
     } else if (boardType === 'truncated-hexagonal') {
         board = generateTruncatedHexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
-    } else if (boardType === 'great-rhombitrihexagonal') {
-        board = generateGreatRhombitrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
+    } else if (boardType === 'truncated-trihexagonal') {
+        board = generateTruncatedTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
     } else if (boardType === 'snub-square') {
         board = generateSnubSquareBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6 });
     } else if (boardType === 'snub-trihexagonal') {

@@ -1,9 +1,9 @@
 /**
- * Generates a Great Rhombitrihexagonal tiling board (4.6.12).
+ * Generates a Truncated Trihexagonal tiling board (4.6.12).
  * This tiling consists of dodecagons, hexagons, and squares.
  * Every vertex is shared by one dodecagon, one hexagon, and one square.
  */
-export function generateGreatRhombitrihexagonalBoard(options) {
+export function generateTruncatedTrihexagonalBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
 
   // Side length 'a' for all polygons.
@@ -73,37 +73,49 @@ export function generateGreatRhombitrihexagonalBoard(options) {
         const angleH = i * 60 + 30;
         const hcx = cx + distH * Math.cos(angleH * Math.PI / 180);
         const hcy = cy + distH * Math.sin(angleH * Math.PI / 180);
-        getTile(hcx, hcy, 6, angleH, R6, "h");
+        // Corrected hexagon rotation: 0 (multiples of 60) ensures side aligned with dodecagon
+        getTile(hcx, hcy, 6, 0, R6, "h");
       }
     }
   }
 
-  // 2. Build connectivity based on vertex proximity
+  // 2. Build connectivity based on vertex proximity (optimized with spatial hash)
   const addNeighbor = (idx1, id2) => {
     if (!tiles[idx1].neighbors.includes(id2)) {
       tiles[idx1].neighbors.push(id2);
     }
   };
 
-  for (let i = 0; i < tiles.length; i++) {
-    for (let j = i + 1; j < tiles.length; j++) {
-      let common = 0;
-      for (const p1 of tiles[i].points) {
-        for (const p2 of tiles[j].points) {
-          const dx = p1[0] - p2[0];
-          const dy = p1[1] - p2[1];
-          if (dx * dx + dy * dy < 0.01) {
-            common++;
-            break;
-          }
-        }
-      }
-      if (common >= 2) {
-        addNeighbor(i, tiles[j].id);
-        addNeighbor(j, tiles[i].id);
+  const vertexMap = new Map();
+  tiles.forEach(tile => {
+    tile.points.forEach(p => {
+      const vx = Math.round(p[0] * 100);
+      const vy = Math.round(p[1] * 100);
+      const key = `${vx},${vy}`;
+      if (!vertexMap.has(key)) vertexMap.set(key, []);
+      vertexMap.get(key).push(tile.id);
+    });
+  });
+
+  const neighborCounts = new Map();
+  vertexMap.forEach(tileIds => {
+    for (let i = 0; i < tileIds.length; i++) {
+      for (let j = i + 1; j < tileIds.length; j++) {
+        const id1 = Math.min(tileIds[i], tileIds[j]);
+        const id2 = Math.max(tileIds[i], tileIds[j]);
+        const key = `${id1},${id2}`;
+        neighborCounts.set(key, (neighborCounts.get(key) || 0) + 1);
       }
     }
-  }
+  });
+
+  neighborCounts.forEach((count, key) => {
+    if (count >= 2) {
+      const [id1, id2] = key.split(',').map(Number);
+      addNeighbor(id1, id2);
+      addNeighbor(id2, id1);
+    }
+  });
 
   // 3. Finalize
   let minX = Infinity, minY = Infinity;
@@ -131,7 +143,7 @@ export function generateGreatRhombitrihexagonalBoard(options) {
 
   return {
     version: 1,
-    generator: "great-rhombitrihexagonal",
+    generator: "truncated-trihexagonal",
     width: maxX - minX,
     height: maxY - minY,
     tiles,

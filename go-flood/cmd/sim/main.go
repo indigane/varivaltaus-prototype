@@ -642,8 +642,8 @@ func generateBaseBoard(boardType string, opts tilings.Options) core.Board {
 		return tilings.GenerateTrihexagonalBoard(opts)
 	case "truncated-hexagonal":
 		return tilings.GenerateTruncatedHexagonalBoard(opts)
-	case "great-rhombitrihexagonal":
-		return tilings.GenerateGreatRhombitrihexagonalBoard(opts)
+	case "truncated-trihexagonal":
+		return tilings.GenerateTruncatedTrihexagonalBoard(opts)
 	case "snub-square":
 		return tilings.GenerateSnubSquareBoard(opts)
 	case "snub-trihexagonal":

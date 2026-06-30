@@ -7,7 +7,7 @@ export function generateSnubTrihexagonalBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
 
   const D = a * Math.sqrt(7);
-  const alpha = Math.atan(1 / (3 * Math.sqrt(3)));
+  const alpha = Math.atan(Math.sqrt(3) / 5);
 
   const tiles = [];
   const hexMap = new Map();
@@ -19,7 +19,14 @@ export function generateSnubTrihexagonalBoard(options) {
   };
 
   let idCounter = 0;
-  const allVertices = [];
+  const vertexMap = new Map();
+  const getVertexId = (p) => {
+    const key = `${p[0].toFixed(3)},${p[1].toFixed(3)}`;
+    if (vertexMap.has(key)) return vertexMap.get(key).id;
+    const id = vertexMap.size;
+    vertexMap.set(key, { id, p });
+    return id;
+  };
 
   // 1. Generate Hexagons
   for (let r = 0; r < rows; r++) {
@@ -29,11 +36,12 @@ export function generateSnubTrihexagonalBoard(options) {
       const id = idCounter++;
 
       const points = [];
+      const vIds = [];
       for (let i = 0; i < 6; i++) {
         const angle = alpha + (i * 60) * Math.PI / 180;
         const p = [cx + a * Math.cos(angle), cy + a * Math.sin(angle)];
         points.push(p);
-        allVertices.push(p);
+        vIds.push(getVertexId(p));
       }
 
       const tile = {
@@ -41,6 +49,7 @@ export function generateSnubTrihexagonalBoard(options) {
         colorId: Math.floor(rng() * colorCount),
         ownerId: null,
         points,
+        vIds,
         neighbors: []
       };
       tiles.push(tile);
@@ -48,7 +57,8 @@ export function generateSnubTrihexagonalBoard(options) {
     }
   }
 
-  // 2. Generate Triangles by finding equilateral triplets among hexagon vertices
+  // 2. Generate Triangles by finding equilateral triplets among deduplicated vertices
+  const allVertices = Array.from(vertexMap.values()).map(v => v.p);
   const distSq = (p1, p2) => {
     const dx = p1[0] - p2[0];
     const dy = p1[1] - p2[1];
@@ -101,6 +111,7 @@ export function generateSnubTrihexagonalBoard(options) {
                       colorId: Math.floor(rng() * colorCount),
                       ownerId: null,
                       points: [v1, v2, v3],
+                      vIds: [i, j, k],
                       neighbors: []
                     });
                   }
@@ -113,34 +124,31 @@ export function generateSnubTrihexagonalBoard(options) {
     }
   }
 
-  // 3. Connectivity via proximity
-  const addNeighbor = (idx1, id2) => {
-    if (!tiles[idx1].neighbors.includes(id2)) {
-      tiles[idx1].neighbors.push(id2);
-    }
-  };
+  // 3. Optimized Connectivity via vIds
+  const vertexToTiles = new Map();
+  tiles.forEach((tile, idx) => {
+    tile.vIds.forEach(vId => {
+      if (!vertexToTiles.has(vId)) vertexToTiles.set(vId, []);
+      vertexToTiles.get(vId).push(idx);
+    });
+  });
 
-  for (let i = 0; i < tiles.length; i++) {
-    for (let j = i + 1; j < tiles.length; j++) {
-      let common = 0;
-      for (const p1 of tiles[i].points) {
-        for (const p2 of tiles[j].points) {
-          const dx = p1[0] - p2[0];
-          const dy = p1[1] - p2[1];
-          if (dx * dx + dy * dy < 0.01) {
-            common++;
-            break;
-          }
-        }
+  tiles.forEach((tile, i) => {
+    const neighborCounts = new Map();
+    tile.vIds.forEach(vId => {
+      vertexToTiles.get(vId).forEach(j => {
+        if (i === j) return;
+        neighborCounts.set(j, (neighborCounts.get(j) || 0) + 1);
+      });
+    });
+    neighborCounts.forEach((count, j) => {
+      if (count >= 2) {
+        tile.neighbors.push(tiles[j].id);
       }
-      if (common >= 2) {
-        addNeighbor(i, tiles[j].id);
-        addNeighbor(j, tiles[i].id);
-      }
-    }
-  }
+    });
+  });
 
-  // 3. Finalize
+  // 4. Finalize
   let minX = Infinity, minY = Infinity;
   let maxX = -Infinity, maxY = -Infinity;
 

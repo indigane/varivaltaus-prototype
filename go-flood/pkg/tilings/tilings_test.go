@@ -55,9 +55,9 @@ func TestGenerators(t *testing.T) {
 		t.Errorf("Expected some tiles for truncated hexagonal board")
 	}
 
-	board = GenerateGreatRhombitrihexagonalBoard(opts)
+	board = GenerateTruncatedTrihexagonalBoard(opts)
 	if len(board.Tiles) == 0 {
-		t.Errorf("Expected some tiles for great rhombitrihexagonal board")
+		t.Errorf("Expected some tiles for truncated trihexagonal board")
 	}
 
 	board = GenerateSnubSquareBoard(opts)
