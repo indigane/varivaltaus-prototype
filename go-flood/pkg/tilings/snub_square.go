@@ -22,6 +22,12 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 		p  core.Point
 	}
 	vertexMap := make(map[string]vertexInfo)
+	vertexEdgeKey := func(a, b int) string {
+		if a < b {
+			return fmt.Sprintf("%d,%d", a, b)
+		}
+		return fmt.Sprintf("%d,%d", b, a)
+	}
 	getVertexId := func(p core.Point) int {
 		key := fmt.Sprintf("%.3f,%.3f", p[0], p[1])
 		if info, ok := vertexMap[key]; ok {
@@ -40,29 +46,32 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 	var vTiles []vTile
 
 	// 1. Generate Squares
+	minBound := -D / 2.0
+	maxXBound := (float64(cols) - 0.5) * D
+	maxYBound := (float64(rows) - 0.5) * D
+
 	for r := -1; r <= rows; r++ {
 		for q := -1; q <= cols; q++ {
 			centers := []struct {
-				x, y float64
+				x, y, rot float64
 			}{
-				{D * float64(q), D * float64(r)},
-				{D * (float64(q) + 0.5), D * (float64(r) + 0.5)},
+				{D * float64(q), D * float64(r), alpha},
+				{D * (float64(q) + 0.5), D * (float64(r) + 0.5), -alpha},
 			}
 
 			for _, center := range centers {
 				centroidX := center.x
 				centroidY := center.y
+				points := make([]core.Point, 4)
+				vIds := make([]int, 4)
+				for i := 0; i < 4; i++ {
+					vAngle := center.rot + math.Pi/4.0 + float64(i)*math.Pi/2.0
+					p := core.Point{center.x + Rsq*math.Cos(vAngle), center.y + Rsq*math.Sin(vAngle)}
+					points[i] = p
+					vIds[i] = getVertexId(p)
+				}
 
-				if centroidX >= -D/2 && centroidX <= (float64(cols)-0.5)*D && centroidY >= -D/2 && centroidY <= (float64(rows)-0.5)*D {
-					points := make([]core.Point, 4)
-					vIds := make([]int, 4)
-					for i := 0; i < 4; i++ {
-						vAngle := alpha + math.Pi/4.0 + float64(i)*math.Pi/2.0
-						p := core.Point{center.x + Rsq*math.Cos(vAngle), center.y + Rsq*math.Sin(vAngle)}
-						points[i] = p
-						vIds[i] = getVertexId(p)
-					}
-
+				if centroidX >= minBound && centroidX <= maxXBound && centroidY >= minBound && centroidY <= maxYBound {
 					id := idCounter
 					idCounter++
 					tiles = append(tiles, core.Tile{
@@ -76,6 +85,26 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 				}
 			}
 		}
+	}
+
+	squareEdgeKeys := make(map[string]bool)
+	for _, vt := range vTiles {
+		for i := range vt.vIds {
+			squareEdgeKeys[vertexEdgeKey(vt.vIds[i], vt.vIds[(i+1)%len(vt.vIds)])] = true
+		}
+	}
+	squareEdgeCount := func(vIds []int) int {
+		count := 0
+		for _, key := range []string{
+			vertexEdgeKey(vIds[0], vIds[1]),
+			vertexEdgeKey(vIds[1], vIds[2]),
+			vertexEdgeKey(vIds[2], vIds[0]),
+		} {
+			if squareEdgeKeys[key] {
+				count++
+			}
+		}
+		return count
 	}
 
 	// 2. Generate Triangles
@@ -92,7 +121,7 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 	}
 
 	targetSq := a * a
-	tolerance := 0.1 * targetSq
+	tolerance := 0.001 * targetSq
 
 	type cell struct{ x, y int }
 	grid := make(map[cell][]int)
@@ -128,8 +157,10 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 									if math.Abs(distSq(v1, v3)-targetSq) < tolerance && math.Abs(distSq(v2, v3)-targetSq) < tolerance {
 										centroidX := (v1[0] + v2[0] + v3[0]) / 3.0
 										centroidY := (v1[1] + v2[1] + v3[1]) / 3.0
+										vIds := []int{i, j, k}
+										insideHalo := centroidX >= minBound-a && centroidX <= maxXBound+a && centroidY >= minBound-a && centroidY <= maxYBound+a
 
-										if centroidX >= -D/2 && centroidX <= (float64(cols)-0.5)*D && centroidY >= -D/2 && centroidY <= (float64(rows)-0.5)*D {
+										if insideHalo && squareEdgeCount(vIds) >= 1 {
 											id := idCounter
 											idCounter++
 											tiles = append(tiles, core.Tile{
@@ -139,7 +170,7 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 												Points:    []core.Point{v1, v2, v3},
 												Neighbors: []int{},
 											})
-											vTiles = append(vTiles, vTile{id, []int{i, j, k}})
+											vTiles = append(vTiles, vTile{id, vIds})
 										}
 									}
 								}
@@ -175,6 +206,28 @@ func GenerateSnubSquareBoard(options Options) core.Board {
 			}
 		}
 	}
+
+	idMap := make(map[int]int)
+	filteredTiles := []core.Tile{}
+	for _, tile := range tiles {
+		if len(tile.Points) == 3 && len(tile.Neighbors) <= 1 {
+			continue
+		}
+		idMap[tile.ID] = len(filteredTiles)
+		filteredTiles = append(filteredTiles, tile)
+	}
+
+	for i := range filteredTiles {
+		neighbors := []int{}
+		for _, neighborID := range filteredTiles[i].Neighbors {
+			if newID, ok := idMap[neighborID]; ok {
+				neighbors = append(neighbors, newID)
+			}
+		}
+		filteredTiles[i].ID = i
+		filteredTiles[i].Neighbors = neighbors
+	}
+	tiles = filteredTiles
 
 	// 4. Finalize
 	minX, minY := math.MaxFloat64, math.MaxFloat64

@@ -10,11 +10,12 @@ export function generateSnubSquareBoard(options) {
   const D = a * Math.sqrt(2 + Math.sqrt(3));
   const alpha = 15 * Math.PI / 180;
 
-  const tiles = [];
+  let tiles = [];
   const startTileIds = [];
 
   let idCounter = 0;
   const vertexMap = new Map();
+  const vertexEdgeKey = (a, b) => a < b ? `${a},${b}` : `${b},${a}`;
   const getVertexId = (p) => {
     const key = `${p[0].toFixed(3)},${p[1].toFixed(3)}`;
     if (vertexMap.has(key)) return vertexMap.get(key).id;
@@ -27,6 +28,10 @@ export function generateSnubSquareBoard(options) {
 
   // 1. Generate Squares
   // There are two orientations of squares in the snub square tiling.
+  const minBound = -D / 2;
+  const maxXBound = (cols - 0.5) * D;
+  const maxYBound = (rows - 0.5) * D;
+
   for (let r = -1; r <= rows; r++) {
     for (let q = -1; q <= cols; q++) {
       // Set 1: At (D*q, D*r) with rotation alpha
@@ -42,7 +47,7 @@ export function generateSnubSquareBoard(options) {
 
       const centers = [
         { x: cx1, y: cy1, rot: alpha },
-        { x: D * (q + 0.5), y: D * (r + 0.5), rot: alpha }
+        { x: D * (q + 0.5), y: D * (r + 0.5), rot: -alpha }
       ];
 
       for (const center of centers) {
@@ -59,7 +64,7 @@ export function generateSnubSquareBoard(options) {
         const centroidX = center.x;
         const centroidY = center.y;
 
-        if (centroidX >= -D/2 && centroidX <= (cols-0.5)*D && centroidY >= -D/2 && centroidY <= (rows-0.5)*D) {
+        if (centroidX >= minBound && centroidX <= maxXBound && centroidY >= minBound && centroidY <= maxYBound) {
           const id = idCounter++;
           tiles.push({
             id,
@@ -77,6 +82,19 @@ export function generateSnubSquareBoard(options) {
     }
   }
 
+  const squareEdgeKeys = new Set();
+  tiles.forEach(tile => {
+    for (let i = 0; i < tile.vIds.length; i++) {
+      squareEdgeKeys.add(vertexEdgeKey(tile.vIds[i], tile.vIds[(i + 1) % tile.vIds.length]));
+    }
+  });
+
+  const squareEdgeCount = (vIds) => [
+    vertexEdgeKey(vIds[0], vIds[1]),
+    vertexEdgeKey(vIds[1], vIds[2]),
+    vertexEdgeKey(vIds[2], vIds[0])
+  ].filter(key => squareEdgeKeys.has(key)).length;
+
   // 2. Generate Triangles by finding equilateral triplets among deduplicated vertices
   const allVertices = Array.from(vertexMap.values()).map(v => v.p);
   const distSq = (p1, p2) => {
@@ -86,7 +104,7 @@ export function generateSnubSquareBoard(options) {
   };
 
   const targetSq = a * a;
-  const tolerance = 0.1 * targetSq;
+  const tolerance = 0.001 * targetSq;
 
   const grid = new Map();
   const getCellKey = (p) => `${Math.floor(p[0] / a)},${Math.floor(p[1] / a)}`;
@@ -120,13 +138,16 @@ export function generateSnubSquareBoard(options) {
                     const centroidX = (v1[0] + v2[0] + v3[0]) / 3;
                     const centroidY = (v1[1] + v2[1] + v3[1]) / 3;
 
-                    if (centroidX >= -D/2 && centroidX <= (cols-0.5)*D && centroidY >= -D/2 && centroidY <= (rows-0.5)*D) {
+                    const vIds = [i, j, k];
+                    const insideHalo = centroidX >= minBound - a && centroidX <= maxXBound + a && centroidY >= minBound - a && centroidY <= maxYBound + a;
+
+                    if (insideHalo && squareEdgeCount(vIds) >= 1) {
                       tiles.push({
                         id: idCounter++,
                         colorId: Math.floor(rng() * colorCount),
                         ownerId: null,
                         points: [v1, v2, v3],
-                        vIds: [i, j, k],
+                        vIds,
                         neighbors: []
                       });
                     }
@@ -163,6 +184,15 @@ export function generateSnubSquareBoard(options) {
       }
     });
   });
+
+  const idMap = new Map();
+  const prunedTiles = tiles.filter(tile => !(tile.points.length === 3 && tile.neighbors.length <= 1));
+  prunedTiles.forEach((tile, index) => idMap.set(tile.id, index));
+  tiles = prunedTiles.map((tile, index) => ({
+    ...tile,
+    id: index,
+    neighbors: tile.neighbors.filter(nId => idMap.has(nId)).map(nId => idMap.get(nId))
+  }));
 
   // 4. Finalize
   let minX = Infinity, minY = Infinity;

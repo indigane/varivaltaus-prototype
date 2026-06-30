@@ -17,6 +17,7 @@ export function generateElongatedTriangularBoard(options) {
   let tiles = [];
   let idCounter = 0;
   const vertexMap = new Map();
+  const vertexEdgeKey = (a, b) => a < b ? `${a},${b}` : `${b},${a}`;
   const getVertexId = (p) => {
     const key = `${p[0].toFixed(3)},${p[1].toFixed(3)}`;
     if (vertexMap.has(key)) return vertexMap.get(key).id;
@@ -66,6 +67,7 @@ export function generateElongatedTriangularBoard(options) {
           ownerId: null,
           points,
           vIds,
+          type: 'square',
           neighbors: []
         };
         tiles.push(tile);
@@ -107,6 +109,7 @@ export function generateElongatedTriangularBoard(options) {
             ownerId: null,
             points,
             vIds: points.map(getVertexId),
+            type: 'triangle',
             neighbors: []
           });
         });
@@ -114,15 +117,20 @@ export function generateElongatedTriangularBoard(options) {
     }
   }
 
-  // Finalize: Filter by horizontal bounds and build connectivity
-  const minX_all = Math.min(...Array.from(vertexMap.values()).map(v => v.p[0]));
-  const targetWidth = cols * a;
-
-  const filteredTiles = tiles.filter(t => {
-    const centroidX = t.points.reduce((sum, p) => sum + p[0], 0) / t.points.length;
-    // Use a small epsilon to include the leftmost squares which might be exactly at minX_all
-    return centroidX >= minX_all - 0.1 && centroidX <= minX_all + targetWidth;
+  const squareEdgeKeys = new Set();
+  tiles.filter(t => t.type === 'square').forEach(tile => {
+    for (let i = 0; i < tile.vIds.length; i++) {
+      squareEdgeKeys.add(vertexEdgeKey(tile.vIds[i], tile.vIds[(i + 1) % tile.vIds.length]));
+    }
   });
+
+  const sharesSquareEdge = (tile) => (
+    squareEdgeKeys.has(vertexEdgeKey(tile.vIds[0], tile.vIds[1])) ||
+    squareEdgeKeys.has(vertexEdgeKey(tile.vIds[1], tile.vIds[2])) ||
+    squareEdgeKeys.has(vertexEdgeKey(tile.vIds[2], tile.vIds[0]))
+  );
+
+  const filteredTiles = tiles.filter(t => t.type === 'square' || sharesSquareEdge(t));
 
   // Re-index
   filteredTiles.forEach((t, idx) => t.id = idx);
@@ -167,19 +175,36 @@ export function generateElongatedTriangularBoard(options) {
     t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
   });
 
+  const findClosest = (tx, ty) => {
+    let bestId = 0;
+    let minDist = Infinity;
+    filteredTiles.forEach(t => {
+      const cx = t.points.reduce((sum, p) => sum + p[0], 0) / t.points.length;
+      const cy = t.points.reduce((sum, p) => sum + p[1], 0) / t.points.length;
+      const d = Math.pow(cx - tx, 2) + Math.pow(cy - ty, 2);
+      if (d < minDist) {
+        minDist = d;
+        bestId = t.id;
+      }
+    });
+    return bestId;
+  };
+
+  const width = maxX - minX;
+  const height = maxY - minY;
   const startTileIds = [
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all, 0])))?.id,
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all + targetWidth, 0])))?.id,
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all, (rows - 1) * (a + h)])))?.id,
-    filteredTiles.find(t => t.vIds.includes(getVertexId([minX_all + targetWidth, (rows - 1) * (a + h)])))?.id
-  ].filter(id => id !== undefined);
+    findClosest(0, 0),
+    findClosest(width, 0),
+    findClosest(0, height),
+    findClosest(width, height)
+  ];
 
   return {
     version: 1,
     generator: "elongated-triangular",
-    width: maxX - minX,
-    height: maxY - minY,
+    width,
+    height,
     tiles: filteredTiles,
-    startTileIds: startTileIds.length > 0 ? startTileIds : [0, filteredTiles.length - 1]
+    startTileIds
   };
 }

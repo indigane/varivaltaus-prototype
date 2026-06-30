@@ -33,15 +33,15 @@ export function runTilingTests() {
     testGenerator("Triangle Tri", () => generateTriangleBoard({ ...options, shape: "triangular" }));
     testGenerator("Hex Rect", () => generateHexBoard({ ...options, shape: "rectangular" }));
     testGenerator("Hex Hex", () => generateHexBoard({ ...options, shape: "hexagonal" }));
-    testGenerator("Rhombitrihexagonal", () => generateRhombitrihexagonalBoard(options));
+    testGenerator("Rhombitrihexagonal", () => generateRhombitrihexagonalBoard(options), { sides: [3, 4, 6], edgeLength: options.tileSize });
     testGenerator("Pentagon Cairo", () => generateCairoPentagonBoard(options));
-    testGenerator("Octagonal (4.8.8)", () => generateOctagonalBoard(options));
-    testGenerator("Trihexagonal (3.6.3.6)", () => generateTrihexagonalBoard(options));
-    testGenerator("Truncated Hexagonal (3.12.12)", () => generateTruncatedHexagonalBoard(options));
-    testGenerator("Truncated Trihexagonal (4.6.12)", () => generateTruncatedTrihexagonalBoard(options));
-    testGenerator("Snub Square (3.3.4.3.4)", () => generateSnubSquareBoard(options));
-    testGenerator("Snub Trihexagonal (3.3.3.3.6)", () => generateSnubTrihexagonalBoard(options));
-    testGenerator("Elongated Triangular (3.3.3.4.4)", () => generateElongatedTriangularBoard(options));
+    testGenerator("Octagonal (4.8.8)", () => generateOctagonalBoard(options), { sides: [4, 8], edgeLength: options.tileSize });
+    testGenerator("Trihexagonal (3.6.3.6)", () => generateTrihexagonalBoard(options), { sides: [3, 6], edgeLength: options.tileSize });
+    testGenerator("Truncated Hexagonal (3.12.12)", () => generateTruncatedHexagonalBoard(options), { sides: [3, 12], edgeLength: options.tileSize });
+    testGenerator("Truncated Trihexagonal (4.6.12)", () => generateTruncatedTrihexagonalBoard(options), { sides: [4, 6, 12], edgeLength: options.tileSize });
+    testGenerator("Snub Square (3.3.4.3.4)", () => generateSnubSquareBoard(options), { sides: [3, 4], edgeLength: options.tileSize });
+    testGenerator("Snub Trihexagonal (3.3.3.3.6)", () => generateSnubTrihexagonalBoard(options), { sides: [3, 6], edgeLength: options.tileSize });
+    testGenerator("Elongated Triangular (3.3.3.4.4)", () => generateElongatedTriangularBoard(options), { sides: [3, 4], edgeLength: options.tileSize });
     testGenerator("Prismatic Pentagonal (V3.3.3.4.4)", () => generatePrismaticPentagonalBoard(options));
     testGenerator("Floret Pentagonal (V3.3.3.3.6)", () => generateFloretPentagonalBoard(options));
     testGenerator("Deltoidal Trihexagonal (V3.4.6.4)", () => generateDeltoidalTrihexagonalBoard(options));
@@ -53,7 +53,7 @@ export function runTilingTests() {
     console.log("Tiling Tests Completed.");
 }
 
-function testGenerator(name, genFn) {
+function testGenerator(name, genFn, geometry = null) {
     try {
         const board = genFn();
         const isValid = validateBoardGraph(board);
@@ -68,6 +68,10 @@ function testGenerator(name, genFn) {
             console.error(`[FAIL] ${name}: No tiles generated`);
         }
 
+        if (geometry) {
+            validateRegularGeometry(name, board, geometry);
+        }
+
         for (const tile of board.tiles) {
             if (tile.neighbors.length === 0) {
                 // For most tilings, isolated tiles shouldn't exist in a 10x10 grid
@@ -78,4 +82,47 @@ function testGenerator(name, genFn) {
     } catch (e) {
         console.error(`[FAIL] ${name}: Threw error`, e);
     }
+}
+
+function validateRegularGeometry(name, board, { sides, edgeLength }) {
+    const sideSet = new Set(sides);
+    const margin = Math.min(edgeLength * 5, Math.min(board.width, board.height) / 3);
+    let interiorCount = 0;
+
+    for (const tile of board.tiles) {
+        if (!sideSet.has(tile.points.length)) {
+            console.error(`[FAIL] ${name}: Tile ${tile.id} has unexpected side count ${tile.points.length}`);
+        }
+
+        const lengths = edgeLengths(tile);
+        lengths.forEach((length, edgeIdx) => {
+            if (Math.abs(length - edgeLength) > 0.001) {
+                console.error(`[FAIL] ${name}: Tile ${tile.id} edge ${edgeIdx} length ${length.toFixed(3)}, expected ${edgeLength}`);
+            }
+        });
+
+        const [cx, cy] = centroid(tile.points);
+        if (cx > margin && cy > margin && cx < board.width - margin && cy < board.height - margin) {
+            interiorCount++;
+            if (tile.neighbors.length !== tile.points.length) {
+                console.error(`[FAIL] ${name}: Interior tile ${tile.id} has ${tile.neighbors.length} neighbors, expected ${tile.points.length}`);
+            }
+        }
+    }
+
+    if (interiorCount === 0) {
+        console.error(`[FAIL] ${name}: No interior tiles found for geometry validation`);
+    }
+}
+
+function edgeLengths(tile) {
+    return tile.points.map((p, i) => {
+        const next = tile.points[(i + 1) % tile.points.length];
+        return Math.hypot(p[0] - next[0], p[1] - next[1]);
+    });
+}
+
+function centroid(points) {
+    const sum = points.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1]], [0, 0]);
+    return [sum[0] / points.length, sum[1] / points.length];
 }

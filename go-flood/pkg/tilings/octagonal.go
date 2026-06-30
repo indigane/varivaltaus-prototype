@@ -15,6 +15,8 @@ func GenerateOctagonalBoard(options Options) core.Board {
 	// Apothem of a regular octagon with side length a
 	// For a regular octagon: apothem = a / (2 * tan(π/8)) = a(1+√2)/2
 	apothem := a * (1 + math.Sqrt(2)) / 2.0
+	// Circumradius (center to vertex)
+	R := apothem / math.Cos(math.Pi/8.0)
 	// Distance between adjacent octagon centers (horizontal/vertical)
 	D := 2.0 * apothem
 	cols, rows := options.Cols, options.Rows
@@ -45,8 +47,8 @@ func GenerateOctagonalBoard(options Options) core.Board {
 			for i := 0; i < 8; i++ {
 				angle := (22.5 + 45.0*float64(i)) * math.Pi / 180.0
 				points[i] = core.Point{
-					cx + apothem*math.Cos(angle),
-					cy + apothem*math.Sin(angle),
+					cx + R*math.Cos(angle),
+					cy + R*math.Sin(angle),
 				}
 			}
 

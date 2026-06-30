@@ -24,6 +24,12 @@ func GenerateElongatedTriangularBoard(options Options) core.Board {
 		p  core.Point
 	}
 	vertexMap := make(map[string]vertexInfo)
+	vertexEdgeKey := func(a, b int) string {
+		if a < b {
+			return fmt.Sprintf("%d,%d", a, b)
+		}
+		return fmt.Sprintf("%d,%d", b, a)
+	}
 	getVertexId := func(p core.Point) int {
 		key := fmt.Sprintf("%.3f,%.3f", p[0], p[1])
 		if info, ok := vertexMap[key]; ok {
@@ -37,11 +43,12 @@ func GenerateElongatedTriangularBoard(options Options) core.Board {
 	type vTile struct {
 		points []core.Point
 		vIds   []int
+		tType  string
 	}
 	var rawVTiles []vTile
 
 	for s := 0; s < totalStrips; s++ {
-		isSquareStrip := (s % 2 == 0)
+		isSquareStrip := (s%2 == 0)
 		stripIdx := s / 2
 		yBase := float64(stripIdx)*(a+h) + func() float64 {
 			if isSquareStrip {
@@ -74,7 +81,7 @@ func GenerateElongatedTriangularBoard(options Options) core.Board {
 				for i, p := range points {
 					vIds[i] = getVertexId(p)
 				}
-				rawVTiles = append(rawVTiles, vTile{points, vIds})
+				rawVTiles = append(rawVTiles, vTile{points, vIds, "square"})
 			}
 		} else {
 			offsetBelow := currentSquareOffset
@@ -108,17 +115,26 @@ func GenerateElongatedTriangularBoard(options Options) core.Board {
 					for i, p := range points {
 						vIds[i] = getVertexId(p)
 					}
-					rawVTiles = append(rawVTiles, vTile{points, vIds})
+					rawVTiles = append(rawVTiles, vTile{points, vIds, "triangle"})
 				}
 			}
 		}
 	}
 
-	minXAll := math.MaxFloat64
-	for _, info := range vertexMap {
-		minXAll = math.Min(minXAll, info.p[0])
+	squareEdgeKeys := make(map[string]bool)
+	for _, rt := range rawVTiles {
+		if rt.tType != "square" {
+			continue
+		}
+		for i := range rt.vIds {
+			squareEdgeKeys[vertexEdgeKey(rt.vIds[i], rt.vIds[(i+1)%len(rt.vIds)])] = true
+		}
 	}
-	targetWidth := float64(cols) * a
+	sharesSquareEdge := func(vIds []int) bool {
+		return squareEdgeKeys[vertexEdgeKey(vIds[0], vIds[1])] ||
+			squareEdgeKeys[vertexEdgeKey(vIds[1], vIds[2])] ||
+			squareEdgeKeys[vertexEdgeKey(vIds[2], vIds[0])]
+	}
 
 	var filteredTiles []core.Tile
 	type filteredVTile struct {
@@ -127,12 +143,7 @@ func GenerateElongatedTriangularBoard(options Options) core.Board {
 	var filteredVTiles []filteredVTile
 
 	for _, rt := range rawVTiles {
-		sumX := 0.0
-		for _, p := range rt.points {
-			sumX += p[0]
-		}
-		centroidX := sumX / float64(len(rt.points))
-		if centroidX >= minXAll-0.1 && centroidX <= minXAll+targetWidth {
+		if rt.tType == "square" || sharesSquareEdge(rt.vIds) {
 			id := idCounter
 			idCounter++
 			filteredTiles = append(filteredTiles, core.Tile{
@@ -188,38 +199,39 @@ func GenerateElongatedTriangularBoard(options Options) core.Board {
 		}
 	}
 
-	startTileIds := []int{}
-	findTileWithVertex := func(p core.Point) int {
-		vId := getVertexId(p)
-		for idx, fvt := range filteredVTiles {
-			for _, vid := range fvt.vIds {
-				if vid == vId {
-					return filteredTiles[idx].ID
-				}
+	findClosest := func(tx, ty float64) int {
+		bestId := 0
+		minDist := math.MaxFloat64
+		for _, t := range filteredTiles {
+			var cx, cy float64
+			for _, p := range t.Points {
+				cx += p[0]
+				cy += p[1]
+			}
+			cx /= float64(len(t.Points))
+			cy /= float64(len(t.Points))
+			d := math.Pow(cx-tx, 2) + math.Pow(cy-ty, 2)
+			if d < minDist {
+				minDist = d
+				bestId = t.ID
 			}
 		}
-		return -1
+		return bestId
 	}
 
-	s1 := findTileWithVertex(core.Point{minXAll, 0})
-	s2 := findTileWithVertex(core.Point{minXAll + targetWidth, 0})
-	s3 := findTileWithVertex(core.Point{minXAll, float64(rows-1) * (a + h)})
-	s4 := findTileWithVertex(core.Point{minXAll + targetWidth, float64(rows-1) * (a + h)})
-
-	for _, s := range []int{s1, s2, s3, s4} {
-		if s != -1 {
-			startTileIds = append(startTileIds, s)
-		}
-	}
-	if len(startTileIds) == 0 {
-		startTileIds = []int{0, len(filteredTiles) - 1}
+	w, hBoard := maxX-minX, maxY-minY
+	startTileIds := []int{
+		findClosest(0, 0),
+		findClosest(w, 0),
+		findClosest(0, hBoard),
+		findClosest(w, hBoard),
 	}
 
 	return core.Board{
 		Version:      1,
 		Generator:    "elongated-triangular",
-		Width:        maxX - minX,
-		Height:       maxY - minY,
+		Width:        w,
+		Height:       hBoard,
 		Cols:         cols,
 		Rows:         rows,
 		Tiles:        filteredTiles,
