@@ -6,16 +6,12 @@
 export function generateSnubSquareBoard(options) {
   const { cols, rows, tileSize: a, colorCount, rng } = options;
 
-  // Correct lattice constant for snub square (3.3.4.3.4) where squares share vertices
+  // Lattice constant for snub square (3.3.4.3.4)
   const D = a * Math.sqrt(2 + Math.sqrt(3));
   const alpha = 15 * Math.PI / 180;
 
   const tiles = [];
-  const squareMap = new Map();
-
-  const getSquareCenter = (q, r) => {
-    return [D * q, D * r];
-  };
+  const startTileIds = [];
 
   let idCounter = 0;
   const vertexMap = new Map();
@@ -27,32 +23,57 @@ export function generateSnubSquareBoard(options) {
     return id;
   };
 
-  // 1. Generate Squares
   const Rsq = a / Math.sqrt(2);
-  for (let r = 0; r < rows; r++) {
-    for (let q = 0; q < cols; q++) {
-      const [cx, cy] = getSquareCenter(q, r);
-      const id = idCounter++;
 
-      const points = [];
-      const vIds = [];
-      for (let i = 0; i < 4; i++) {
-        const vAngle = alpha + Math.PI / 4 + i * Math.PI / 2;
-        const p = [cx + Rsq * Math.cos(vAngle), cy + Rsq * Math.sin(vAngle)];
-        points.push(p);
-        vIds.push(getVertexId(p));
+  // 1. Generate Squares
+  // There are two orientations of squares in the snub square tiling.
+  for (let r = -1; r <= rows; r++) {
+    for (let q = -1; q <= cols; q++) {
+      // Set 1: At (D*q, D*r) with rotation alpha
+      const cx1 = D * q;
+      const cy1 = D * r;
+
+      // Set 2: At (D*(q+0.5), D*(r+0.5)) with rotation -alpha (or alpha + 90?)
+      // Actually the snub square has all squares same rotation?
+      // No, let's check: in s{4,4} squares are rotated by alpha.
+      // Wait, the Wikipedia image shows all squares have same orientation relative to the lattice.
+      // BUT if I only place them at (D*q, D*r), there are huge gaps.
+      // The other set of squares is at (D*(q+0.5), D*(r+0.5))
+
+      const centers = [
+        { x: cx1, y: cy1, rot: alpha },
+        { x: D * (q + 0.5), y: D * (r + 0.5), rot: alpha }
+      ];
+
+      for (const center of centers) {
+        const points = [];
+        const vIds = [];
+        for (let i = 0; i < 4; i++) {
+          const vAngle = center.rot + Math.PI / 4 + i * Math.PI / 2;
+          const p = [center.x + Rsq * Math.cos(vAngle), center.y + Rsq * Math.sin(vAngle)];
+          points.push(p);
+          vIds.push(getVertexId(p));
+        }
+
+        // Only add if within roughly [0, cols*D] x [0, rows*D]
+        const centroidX = center.x;
+        const centroidY = center.y;
+
+        if (centroidX >= -D/2 && centroidX <= (cols-0.5)*D && centroidY >= -D/2 && centroidY <= (rows-0.5)*D) {
+          const id = idCounter++;
+          tiles.push({
+            id,
+            colorId: Math.floor(rng() * colorCount),
+            ownerId: null,
+            points,
+            vIds,
+            neighbors: []
+          });
+          if (q >= 0 && q < cols && r >= 0 && r < rows) {
+             // Candidates for start tiles
+          }
+        }
       }
-
-      const tile = {
-        id,
-        colorId: Math.floor(rng() * colorCount),
-        ownerId: null,
-        points,
-        vIds,
-        neighbors: []
-      };
-      tiles.push(tile);
-      squareMap.set(`${q},${r}`, id);
     }
   }
 
@@ -88,7 +109,6 @@ export function generateSnubSquareBoard(options) {
           if (j <= i) continue;
           const v2 = allVertices[j];
           if (Math.abs(distSq(v1, v2) - targetSq) < tolerance) {
-            // v3 must be in neighborhood of v1
             for (let dx2 = -1; dx2 <= 1; dx2++) {
               for (let dy2 = -1; dy2 <= 1; dy2++) {
                 const cell3 = grid.get(`${cx + dx2},${cy + dy2}`);
@@ -97,14 +117,19 @@ export function generateSnubSquareBoard(options) {
                   if (k <= j) continue;
                   const v3 = allVertices[k];
                   if (Math.abs(distSq(v1, v3) - targetSq) < tolerance && Math.abs(distSq(v2, v3) - targetSq) < tolerance) {
-                    tiles.push({
-                      id: idCounter++,
-                      colorId: Math.floor(rng() * colorCount),
-                      ownerId: null,
-                      points: [v1, v2, v3],
-                      vIds: [i, j, k],
-                      neighbors: []
-                    });
+                    const centroidX = (v1[0] + v2[0] + v3[0]) / 3;
+                    const centroidY = (v1[1] + v2[1] + v3[1]) / 3;
+
+                    if (centroidX >= -D/2 && centroidX <= (cols-0.5)*D && centroidY >= -D/2 && centroidY <= (rows-0.5)*D) {
+                      tiles.push({
+                        id: idCounter++,
+                        colorId: Math.floor(rng() * colorCount),
+                        ownerId: null,
+                        points: [v1, v2, v3],
+                        vIds: [i, j, k],
+                        neighbors: []
+                      });
+                    }
                   }
                 }
               }
@@ -115,7 +140,7 @@ export function generateSnubSquareBoard(options) {
     }
   }
 
-  // 3. Optimized Connectivity using vIds
+  // 3. Optimized Connectivity
   const vertexToTiles = new Map();
   tiles.forEach((tile, idx) => {
     tile.vIds.forEach(vId => {
@@ -155,18 +180,36 @@ export function generateSnubSquareBoard(options) {
     t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
   });
 
-  const startTileIds = [
-    squareMap.get(`0,0`),
-    squareMap.get(`${cols - 1},0`),
-    squareMap.get(`0,${rows - 1}`),
-    squareMap.get(`${cols - 1},${rows - 1}`)
-  ].filter(id => id !== undefined);
+  // Pick start tiles from corners
+  const findClosest = (tx, ty) => {
+    let bestId = 0;
+    let minDist = Infinity;
+    tiles.forEach(t => {
+      let cx = 0, cy = 0;
+      t.points.forEach(p => { cx += p[0]; cy += p[1]; });
+      cx /= t.points.length;
+      cy /= t.points.length;
+      const d = Math.pow(cx - tx, 2) + Math.pow(cy - ty, 2);
+      if (d < minDist) {
+        minDist = d;
+        bestId = t.id;
+      }
+    });
+    return bestId;
+  };
+
+  const w = maxX - minX;
+  const h = maxY - minY;
+  startTileIds.push(findClosest(0, 0));
+  startTileIds.push(findClosest(w, 0));
+  startTileIds.push(findClosest(0, h));
+  startTileIds.push(findClosest(w, h));
 
   return {
     version: 1,
     generator: "snub-square",
-    width: maxX - minX,
-    height: maxY - minY,
+    width: w,
+    height: h,
     tiles,
     startTileIds
   };

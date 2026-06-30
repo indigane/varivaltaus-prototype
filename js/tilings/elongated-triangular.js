@@ -120,7 +120,8 @@ export function generateElongatedTriangularBoard(options) {
 
   const filteredTiles = tiles.filter(t => {
     const centroidX = t.points.reduce((sum, p) => sum + p[0], 0) / t.points.length;
-    return centroidX >= minX_all && centroidX <= minX_all + targetWidth;
+    // Use a small epsilon to include the leftmost squares which might be exactly at minX_all
+    return centroidX >= minX_all - 0.1 && centroidX <= minX_all + targetWidth;
   });
 
   // Re-index

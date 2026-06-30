@@ -34,6 +34,7 @@ export function generateTruncatedTrihexagonalBoard(options) {
 
     const tile = {
       id,
+      type: prefix,
       colorId: Math.floor(rng() * colorCount),
       ownerId: null,
       points,
@@ -54,13 +55,16 @@ export function generateTruncatedTrihexagonalBoard(options) {
   const dodecaIds = [];
 
   // 1. Generate Dodecagons and their surrounding squares and hexagons
-  for (let r = 0; r < rows; r++) {
+  // We expand the range slightly to ensure the edges are filled, then cull.
+  for (let r = -1; r <= rows; r++) {
     const r_offset = Math.floor(r / 2);
-    for (let q = -r_offset; q < cols - r_offset; q++) {
+    for (let q = -r_offset - 1; q < cols - r_offset + 1; q++) {
       const [cx, cy] = getDodecaCenter(q, r);
 
       const dId = getTile(cx, cy, 12, 15, R12, "d");
-      dodecaIds.push(dId);
+      if (q >= -r_offset && q < cols - r_offset && r >= 0 && r < rows) {
+          dodecaIds.push(dId);
+      }
 
       for (let i = 0; i < 6; i++) {
         // Squares
@@ -73,19 +77,12 @@ export function generateTruncatedTrihexagonalBoard(options) {
         const angleH = i * 60 + 30;
         const hcx = cx + distH * Math.cos(angleH * Math.PI / 180);
         const hcy = cy + distH * Math.sin(angleH * Math.PI / 180);
-        // Corrected hexagon rotation: 0 (multiples of 60) ensures side aligned with dodecagon
         getTile(hcx, hcy, 6, 0, R6, "h");
       }
     }
   }
 
-  // 2. Build connectivity based on vertex proximity (optimized with spatial hash)
-  const addNeighbor = (idx1, id2) => {
-    if (!tiles[idx1].neighbors.includes(id2)) {
-      tiles[idx1].neighbors.push(id2);
-    }
-  };
-
+  // 2. Build connectivity based on vertex proximity
   const vertexMap = new Map();
   tiles.forEach(tile => {
     tile.points.forEach(p => {
@@ -97,31 +94,63 @@ export function generateTruncatedTrihexagonalBoard(options) {
     });
   });
 
-  const neighborCounts = new Map();
+  const neighborPairs = new Map();
   vertexMap.forEach(tileIds => {
     for (let i = 0; i < tileIds.length; i++) {
       for (let j = i + 1; j < tileIds.length; j++) {
         const id1 = Math.min(tileIds[i], tileIds[j]);
         const id2 = Math.max(tileIds[i], tileIds[j]);
         const key = `${id1},${id2}`;
-        neighborCounts.set(key, (neighborCounts.get(key) || 0) + 1);
+        neighborPairs.set(key, (neighborPairs.get(key) || 0) + 1);
       }
     }
   });
 
-  neighborCounts.forEach((count, key) => {
+  neighborPairs.forEach((count, key) => {
     if (count >= 2) {
       const [id1, id2] = key.split(',').map(Number);
-      addNeighbor(id1, id2);
-      addNeighbor(id2, id1);
+      tiles[id1].neighbors.push(id2);
+      tiles[id2].neighbors.push(id1);
     }
   });
 
-  // 3. Finalize
+  // 3. Culling: Only keep tiles that are "well-connected" or dodecagons within bounds
+  // A cleaner way: filter by a bounding box of dodecagon centers.
+  const minCx = 0, maxCx = dist * (cols - 1);
+  const minCy = 0, maxCy = dist * (Math.sqrt(3) / 2) * (rows - 1);
+
+  const filteredTiles = tiles.filter(tile => {
+     let cx = 0, cy = 0;
+     tile.points.forEach(p => { cx += p[0]; cy += p[1]; });
+     cx /= tile.points.length;
+     cy /= tile.points.length;
+
+     // Relaxed bounds to include surrounding hexagons and squares
+     const buffer = a * 1.5;
+     return cx >= minCx - buffer && cx <= maxCx + buffer &&
+            cy >= minCy - buffer && cy <= maxCy + buffer;
+  });
+
+  // Re-index and update neighbors
+  const idMap = new Map();
+  filteredTiles.forEach((tile, i) => {
+    idMap.set(tile.id, i);
+  });
+
+  const finalTiles = filteredTiles.map(tile => {
+    const newTile = {
+       ...tile,
+       id: idMap.get(tile.id),
+       neighbors: tile.neighbors.filter(nId => idMap.has(nId)).map(nId => idMap.get(nId))
+    };
+    return newTile;
+  });
+
+  // 4. Finalize
   let minX = Infinity, minY = Infinity;
   let maxX = -Infinity, maxY = -Infinity;
 
-  for (const t of tiles) {
+  for (const t of finalTiles) {
     for (const p of t.points) {
       minX = Math.min(minX, p[0]);
       minY = Math.min(minY, p[1]);
@@ -130,7 +159,7 @@ export function generateTruncatedTrihexagonalBoard(options) {
     }
   }
 
-  tiles.forEach(t => {
+  finalTiles.forEach(t => {
     t.points = t.points.map(p => [p[0] - minX, p[1] - minY]);
   });
 
@@ -139,14 +168,14 @@ export function generateTruncatedTrihexagonalBoard(options) {
     dodecaIds[cols - 1],
     dodecaIds[(rows - 1) * cols],
     dodecaIds[dodecaIds.length - 1]
-  ].filter(id => id !== undefined);
+  ].filter(id => id !== undefined && idMap.has(id)).map(id => idMap.get(id));
 
   return {
     version: 1,
     generator: "truncated-trihexagonal",
     width: maxX - minX,
     height: maxY - minY,
-    tiles,
-    startTileIds
+    tiles: finalTiles,
+    startTileIds: startTileIds
   };
 }

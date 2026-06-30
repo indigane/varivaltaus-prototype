@@ -132,7 +132,7 @@ func GenerateElongatedTriangularBoard(options Options) core.Board {
 			sumX += p[0]
 		}
 		centroidX := sumX / float64(len(rt.points))
-		if centroidX >= minXAll && centroidX <= minXAll+targetWidth {
+		if centroidX >= minXAll-0.1 && centroidX <= minXAll+targetWidth {
 			id := idCounter
 			idCounter++
 			filteredTiles = append(filteredTiles, core.Tile{

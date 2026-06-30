@@ -2,3 +2,5 @@ test-results/
 .DS_Store
 node_modules/
 *.log
+go-flood/main
+go-flood/sim
