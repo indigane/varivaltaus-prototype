@@ -74,6 +74,110 @@ func GenerateSquareBoard(options Options) core.Board {
 	}
 }
 
+func GenerateBrickBoard(options Options) core.Board {
+	w := options.TileSize * 2
+	h := options.TileSize
+	tiles := make([]core.Tile, 0, options.Rows*options.Cols)
+
+	for r := 0; r < options.Rows; r++ {
+		isOffset := (r % 2 == 1)
+		for c := 0; c < options.Cols; c++ {
+			id := r*options.Cols + c
+			x := float64(c) * w
+			if isOffset {
+				x += w / 2
+			}
+			y := float64(r) * h
+
+			points := []core.Point{
+				{x, y},
+				{x + w, y},
+				{x + w, y + h},
+				{x, y + h},
+			}
+
+			neighbors := []int{}
+			// Left/Right
+			if c > 0 {
+				neighbors = append(neighbors, id-1)
+			}
+			if c < options.Cols-1 {
+				neighbors = append(neighbors, id+1)
+			}
+
+			// Up/Down
+			otherRows := []int{r - 1, r + 1}
+			for _, nr := range otherRows {
+				if nr >= 0 && nr < options.Rows {
+					if isOffset {
+						// Odd row (offset right) connects to c and c+1 in even rows above/below
+						if c >= 0 && c < options.Cols {
+							neighbors = append(neighbors, nr*options.Cols+c)
+						}
+						if c+1 < options.Cols {
+							neighbors = append(neighbors, nr*options.Cols+c+1)
+						}
+					} else {
+						// Even row (offset zero) connects to c-1 and c in odd rows above/below
+						if c-1 >= 0 {
+							neighbors = append(neighbors, nr*options.Cols+c-1)
+						}
+						if c < options.Cols {
+							neighbors = append(neighbors, nr*options.Cols+c)
+						}
+					}
+				}
+			}
+
+			tiles = append(tiles, core.Tile{
+				ID:        id,
+				ColorID:   int(options.RNG() * float64(options.ColorCount)),
+				OwnerID:   nil,
+				Points:    points,
+				Neighbors: neighbors,
+			})
+		}
+	}
+
+	// Calculate bounding box for normalization
+	minX, minY := math.MaxFloat64, math.MaxFloat64
+	maxX, maxY := -math.MaxFloat64, -math.MaxFloat64
+	for _, t := range tiles {
+		for _, p := range t.Points {
+			minX = math.Min(minX, p[0])
+			minY = math.Min(minY, p[1])
+			maxX = math.Max(maxX, p[0])
+			maxY = math.Max(maxY, p[1])
+		}
+	}
+
+	for i := range tiles {
+		newPoints := make([]core.Point, len(tiles[i].Points))
+		for j, p := range tiles[i].Points {
+			newPoints[j] = core.Point{p[0] - minX, p[1] - minY}
+		}
+		tiles[i].Points = newPoints
+	}
+
+	startTileIds := []int{
+		0,
+		len(tiles) - 1,
+		options.Cols - 1,
+		(options.Rows - 1) * options.Cols,
+	}
+
+	return core.Board{
+		Version:      1,
+		Generator:    "brick",
+		Width:        maxX - minX,
+		Height:       maxY - minY,
+		Cols:         options.Cols,
+		Rows:         options.Rows,
+		Tiles:        tiles,
+		StartTileIds: startTileIds,
+	}
+}
+
 func GenerateTriangleBoard(options Options) core.Board {
 	tiles := []core.Tile{}
 	h := options.TileSize * math.Sqrt(3) / 2

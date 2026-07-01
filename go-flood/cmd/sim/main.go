@@ -634,6 +634,8 @@ func generateBaseBoard(boardType string, opts tilings.Options) core.Board {
 	switch boardType {
 	case "square":
 		return tilings.GenerateSquareBoard(opts)
+	case "brick":
+		return tilings.GenerateBrickBoard(opts)
 	case "triangle":
 		return tilings.GenerateTriangleBoard(opts)
 	case "hex":

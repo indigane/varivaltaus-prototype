@@ -23,6 +23,12 @@ func TestGenerators(t *testing.T) {
 		t.Errorf("Expected 100 tiles, got %d", len(board.Tiles))
 	}
 
+	board = GenerateBrickBoard(opts)
+	if len(board.Tiles) != 100 {
+		t.Errorf("Expected 100 tiles for brick board, got %d", len(board.Tiles))
+	}
+	assertNeighborGraph(t, "brick", board)
+
 	board = GenerateTriangleBoard(opts)
 	if len(board.Tiles) != 100 {
 		t.Errorf("Expected 100 tiles for triangle board, got %d", len(board.Tiles))
