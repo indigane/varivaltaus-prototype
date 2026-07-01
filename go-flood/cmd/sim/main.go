@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-flood/pkg/bots"
 	"go-flood/pkg/core"
+	"go-flood/pkg/fairness"
 	"go-flood/pkg/tilings"
 	"math"
 	"sort"
@@ -15,7 +16,7 @@ import (
 )
 
 func main() {
-	mode := flag.String("mode", "sim", "Mode: sim, fairness, or search")
+	mode := flag.String("mode", "sim", "Mode: sim, fairness, search, human-fairness, or human-seed-search")
 	gameCount := flag.Int("games", 100, "Number of games (or batches) to simulate")
 	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, rhombitrihexagonal, pythagorean, pentagon-cairo, pentagon-prismatic, pentagon-floret, deltoidal-trihexagonal, rhombille, triakis-triangular, kisrhombille, tetrakis-square, voronoi-jittered, voronoi-random)")
 	colsFlag := flag.Int("cols", 20, "Number of columns")
@@ -24,7 +25,7 @@ func main() {
 	concurrency := flag.Int("concurrency", 8, "Number of concurrent simulations")
 	botTypesFlag := flag.String("bots", "greedy,random", "Comma-separated list of bot types for players")
 	seed := flag.Uint("seed", uint(time.Now().UnixNano()), "Initial seed for the simulation")
-	startTilesFlag := flag.String("start-tiles", "", "Comma-separated list of start tile IDs (for fairness mode)")
+	startTilesFlag := flag.String("start-tiles", "", "Comma-separated list of start tile IDs (for fairness and human-fairness modes)")
 
 	// New study flags
 	teamsFlag := flag.String("teams", "", "Comma-separated list of team IDs (e.g., 0,0,1,1)")
@@ -34,24 +35,32 @@ func main() {
 	startAreaBufferFlag := flag.Bool("start-area-buffer", true, "Whether to apply starting area buffer")
 	turnOrderFlag := flag.String("turn-order", "players", "Turn order: players or snake")
 	maskFlag := flag.String("mask", "", "Mask: none, circular, triangular, hexagonal, ellipse-v, ellipse-h, gemstone, donut, hourglass-v, hourglass-h, plus")
+	localDepthFlag := flag.Int("local-depth", 0, "Human fairness nearfield depth (0 = automatic)")
+	seedCountFlag := flag.Int("seed-count", 100, "Number of board seeds to scan in human-seed-search mode")
+	fairnessThresholdFlag := flag.Float64("fairness-threshold", -1, "Maximum human fairness score to accept in human-seed-search mode (-1 = no threshold)")
+	topFlag := flag.Int("top", 10, "Number of results to print in search modes")
 
 	flag.Parse()
 
 	config := studyConfig{
-		boardType:       *boardTypeFlag,
-		cols:            *colsFlag,
-		rows:            *rowsFlag,
-		colorCount:      *colorCountFlag,
-		botTypes:        *botTypesFlag,
-		seed:            *seed,
-		concurrency:     *concurrency,
-		teams:           *teamsFlag,
-		teamTerritory:   *teamTerritoryFlag,
-		startPos:        *startPosFlag,
-		startAreaSize:   *startAreaSizeFlag,
-		startAreaBuffer: *startAreaBufferFlag,
-		turnOrder:       *turnOrderFlag,
-		mask:            *maskFlag,
+		boardType:         *boardTypeFlag,
+		cols:              *colsFlag,
+		rows:              *rowsFlag,
+		colorCount:        *colorCountFlag,
+		botTypes:          *botTypesFlag,
+		seed:              *seed,
+		concurrency:       *concurrency,
+		teams:             *teamsFlag,
+		teamTerritory:     *teamTerritoryFlag,
+		startPos:          *startPosFlag,
+		startAreaSize:     *startAreaSizeFlag,
+		startAreaBuffer:   *startAreaBufferFlag,
+		turnOrder:         *turnOrderFlag,
+		mask:              *maskFlag,
+		localDepth:        *localDepthFlag,
+		seedCount:         *seedCountFlag,
+		fairnessThreshold: *fairnessThresholdFlag,
+		topResults:        *topFlag,
 	}
 
 	switch *mode {
@@ -59,26 +68,46 @@ func main() {
 		runFairnessAnalysis(*gameCount, config, *startTilesFlag)
 	case "search":
 		runFairnessSearch(*gameCount, config)
+	case "human-fairness", "static-fairness":
+		runHumanFairnessAnalysis(config, *startTilesFlag)
+	case "human-seed-search", "seed-search":
+		runHumanSeedSearch(config, *startTilesFlag)
 	default:
 		runSimulation(*gameCount, config)
 	}
 }
 
 type studyConfig struct {
-	boardType       string
-	cols            int
-	rows            int
-	colorCount      int
-	botTypes        string
-	seed            uint
-	concurrency     int
-	teams           string
-	teamTerritory   string
-	startPos        string
-	startAreaSize   int
-	startAreaBuffer bool
-	turnOrder       string
-	mask            string
+	boardType         string
+	cols              int
+	rows              int
+	colorCount        int
+	botTypes          string
+	seed              uint
+	concurrency       int
+	teams             string
+	teamTerritory     string
+	startPos          string
+	startAreaSize     int
+	startAreaBuffer   bool
+	turnOrder         string
+	mask              string
+	localDepth        int
+	seedCount         int
+	fairnessThreshold float64
+	topResults        int
+}
+
+func deriveSeed(base uint, stream uint32, index int) uint32 {
+	x := uint32(base)
+	x += uint32(index+1) * uint32(0x9E3779B9)
+	x += stream * uint32(0x85EBCA6B)
+	x ^= x >> 16
+	x *= uint32(0x7FEB352D)
+	x ^= x >> 15
+	x *= uint32(0x846CA68B)
+	x ^= x >> 16
+	return x
 }
 
 func runSimulation(gameCount int, cfg studyConfig) {
@@ -96,7 +125,6 @@ func runSimulation(gameCount int, cfg studyConfig) {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			workerRNG := core.CreateRNG(uint32(cfg.seed) + uint32(workerID))
 
 			gamesPerWorker := (gameCount) / (cfg.concurrency)
 			if workerID < (gameCount)%cfg.concurrency {
@@ -104,7 +132,10 @@ func runSimulation(gameCount int, cfg studyConfig) {
 			}
 
 			for g := 0; g < gamesPerWorker; g++ {
-				res := runSingleGame(cfg, workerRNG, nil)
+				gameIndex := workerID + g*cfg.concurrency
+				boardRNG := core.CreateRNG(deriveSeed(cfg.seed, 0, gameIndex))
+				playRNG := core.CreateRNG(deriveSeed(cfg.seed, 1, gameIndex))
+				res := runSingleGame(cfg, boardRNG, playRNG, nil)
 				results <- res
 			}
 		}(i)
@@ -182,21 +213,22 @@ type maskAdjustment struct {
 }
 
 var maskAdjustments = map[string]map[string]maskAdjustment{
-// Example:
-// "triakis-triangular": {
-//     "triangular": {dy: 0, scale: 1.0, rotation: 0},
-// },
+	// Example:
+	//
+	//	"triakis-triangular": {
+	//	    "triangular": {dy: 0, scale: 1.0, rotation: 0},
+	//	},
 }
 
 type gameResult struct {
-	winner           int
-	winningTeam      int
-	turns            int
-	dominance        float64
-	tileCount        int
-	leadChanges      int
-	pointOfNoReturn  int
-	maxLead          float64
+	winner          int
+	winningTeam     int
+	turns           int
+	dominance       float64
+	tileCount       int
+	leadChanges     int
+	pointOfNoReturn int
+	maxLead         float64
 }
 
 func applyConfigMask(board core.Board, boardType string, maskType string, size int) core.Board {
@@ -278,13 +310,13 @@ func applyConfigMask(board core.Board, boardType string, maskType string, size i
 	return board
 }
 
-func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) gameResult {
+func runSingleGame(cfg studyConfig, boardRNG core.RNG, playRNG core.RNG, overrideStartTiles []int) gameResult {
 	opts := tilings.Options{
 		Cols:       cfg.cols,
 		Rows:       cfg.rows,
 		TileSize:   10,
 		ColorCount: cfg.colorCount,
-		RNG:        rng,
+		RNG:        boardRNG,
 	}
 
 	board := generateBaseBoard(cfg.boardType, opts)
@@ -334,7 +366,7 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 
 		switch botNames[i] {
 		case "random":
-			playerBots[i] = &bots.RandomBot{RNG: rng}
+			playerBots[i] = &bots.RandomBot{RNG: playRNG}
 		case "greedy":
 			playerBots[i] = &bots.GreedyBot{}
 		case "aggressive":
@@ -346,7 +378,7 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 		case "spite":
 			playerBots[i] = &bots.SpiteBot{}
 		default:
-			playerBots[i] = &bots.RandomBot{RNG: rng}
+			playerBots[i] = &bots.RandomBot{RNG: playRNG}
 		}
 	}
 
@@ -442,10 +474,18 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 	minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
 	for _, t := range board.Tiles {
 		for _, p := range t.Points {
-			if p[0] < minX { minX = p[0] }
-			if p[0] > maxX { maxX = p[0] }
-			if p[1] < minY { minY = p[1] }
-			if p[1] > maxY { maxY = p[1] }
+			if p[0] < minX {
+				minX = p[0]
+			}
+			if p[0] > maxX {
+				maxX = p[0]
+			}
+			if p[1] < minY {
+				minY = p[1]
+			}
+			if p[1] > maxY {
+				maxY = p[1]
+			}
 		}
 	}
 
@@ -501,10 +541,14 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 
 		maxD := 0
 		for _, d := range distances {
-			if d > maxD { maxD = d }
+			if d > maxD {
+				maxD = d
+			}
 		}
 		targetD := maxD / 4
-		if targetD < 2 { targetD = 2 }
+		if targetD < 2 {
+			targetD = 2
+		}
 
 		var candidates []int
 		for id, d := range distances {
@@ -520,14 +564,21 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 				for _, c := range candidates {
 					alreadySelected := false
 					for _, s := range selected {
-						if s == c { alreadySelected = true; break }
+						if s == c {
+							alreadySelected = true
+							break
+						}
 					}
-					if alreadySelected { continue }
+					if alreadySelected {
+						continue
+					}
 
 					minD := 1000000
 					for _, s := range selected {
 						d := distBetweenTiles(board, c, s)
-						if d < minD { minD = d }
+						if d < minD {
+							minD = d
+						}
 					}
 					if minD > maxMinD {
 						maxMinD = minD
@@ -570,6 +621,168 @@ func computeDistances(board *core.Board, startID int) map[int]int {
 		}
 	}
 	return distances
+}
+
+func runHumanFairnessAnalysis(cfg studyConfig, startTiles string) {
+	playerCount := len(strings.Split(cfg.botTypes, ","))
+	report := evaluateHumanFairnessSeed(cfg, cfg.seed, startTiles)
+
+	fmt.Printf("Human fairness heuristic for %dx%d %s board (%d colors, %d players)\n", cfg.cols, cfg.rows, cfg.boardType, cfg.colorCount, playerCount)
+	if cfg.mask != "" && cfg.mask != "none" {
+		fmt.Printf("Mask: %s\n", cfg.mask)
+	}
+	fmt.Printf("Seed: %d\n", cfg.seed)
+	printHumanFairnessReport(report)
+}
+
+func runHumanSeedSearch(cfg studyConfig, startTiles string) {
+	if cfg.seedCount <= 0 {
+		fmt.Println("No seeds to scan; use -seed-count greater than zero.")
+		return
+	}
+
+	type seedResult struct {
+		seed   uint
+		report fairness.Report
+	}
+
+	results := make([]seedResult, 0, cfg.seedCount)
+	accepted := 0
+	for i := 0; i < cfg.seedCount; i++ {
+		candidateSeed := cfg.seed + uint(i)
+		report := evaluateHumanFairnessSeed(cfg, candidateSeed, startTiles)
+		if cfg.fairnessThreshold < 0 || report.Score <= cfg.fairnessThreshold {
+			accepted++
+		}
+		results = append(results, seedResult{seed: candidateSeed, report: report})
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].report.Score < results[j].report.Score
+	})
+
+	limit := cfg.topResults
+	if limit <= 0 || limit > len(results) {
+		limit = len(results)
+	}
+
+	fmt.Printf("Human seed search on %dx%d %s board (%d colors)\n", cfg.cols, cfg.rows, cfg.boardType, cfg.colorCount)
+	fmt.Printf("Scanned seeds: %d..%d (%d total)\n", cfg.seed, cfg.seed+uint(cfg.seedCount)-1, cfg.seedCount)
+	if cfg.fairnessThreshold >= 0 {
+		fmt.Printf("Accepted by threshold %.4f: %d\n", cfg.fairnessThreshold, accepted)
+	}
+	fmt.Printf("\nTop %d seeds by static human fairness:\n", limit)
+	fmt.Println("  Rank  Seed        Score   Rating       Starts     Opening  Voronoi  Local    Mobility  Centrality")
+	for i := 0; i < limit; i++ {
+		r := results[i]
+		sp := r.report.ComponentSpreads
+		fmt.Printf("  %-4d  %-10d  %.4f  %-11s  %-10s  %.4f   %.4f   %.4f   %.4f    %.4f\n",
+			i+1,
+			r.seed,
+			r.report.Score,
+			r.report.Rating,
+			formatInts(r.report.StartTileIDs),
+			sp.Opening,
+			sp.Voronoi,
+			sp.Local,
+			sp.Mobility,
+			sp.Centrality,
+		)
+	}
+}
+
+func evaluateHumanFairnessSeed(cfg studyConfig, baseSeed uint, startTiles string) fairness.Report {
+	playerCount := len(strings.Split(cfg.botTypes, ","))
+	opts := tilings.Options{
+		Cols:       cfg.cols,
+		Rows:       cfg.rows,
+		TileSize:   10,
+		ColorCount: cfg.colorCount,
+		RNG:        core.CreateRNG(deriveSeed(baseSeed, 0, 0)),
+	}
+	board := generateBaseBoard(cfg.boardType, opts)
+	board = applyConfigMask(board, cfg.boardType, cfg.mask, cfg.cols)
+
+	if startTiles != "" {
+		board.StartTileIds = parseTileIDs(startTiles)
+	} else if cfg.startPos != "corners" {
+		board.StartTileIds = findStartTilesByPosition(&board, playerCount, cfg.startPos)
+	} else if len(board.StartTileIds) < playerCount {
+		board.StartTileIds = core.FindFairStartTileIds(&board, playerCount)
+	}
+
+	report := fairness.EvaluateHumanBoard(board, fairness.Config{
+		PlayerCount: playerCount,
+		ColorCount:  cfg.colorCount,
+		Rules:       rulesFromConfig(cfg),
+		LocalDepth:  cfg.localDepth,
+	})
+	return report
+}
+
+func rulesFromConfig(cfg studyConfig) core.Rules {
+	rules := core.DefaultRules()
+	rules.TeamTerritory = cfg.teamTerritory
+	rules.StartingAreaSize = cfg.startAreaSize
+	rules.StartingAreaBuffer = cfg.startAreaBuffer
+	rules.TurnOrder = cfg.turnOrder
+	return rules
+}
+
+func printHumanFairnessReport(report fairness.Report) {
+	fmt.Printf("Start tiles: %s\n", formatInts(report.StartTileIDs))
+	fmt.Printf("Tiles: %d\n", report.TileCount)
+	fmt.Printf("\nFairness score: %.4f (%s)\n", report.Score, report.Rating)
+	fmt.Println("Component spreads (lower is fairer):")
+	fmt.Printf("  Opening:    %.4f\n", report.ComponentSpreads.Opening)
+	fmt.Printf("  Voronoi:    %.4f\n", report.ComponentSpreads.Voronoi)
+	fmt.Printf("  Local:      %.4f\n", report.ComponentSpreads.Local)
+	fmt.Printf("  Mobility:   %.4f\n", report.ComponentSpreads.Mobility)
+	fmt.Printf("  Centrality: %.4f\n", report.ComponentSpreads.Centrality)
+
+	fmt.Println("\nPer-position metrics:")
+	fmt.Println("  Pos  Start  Owned  Degree  Legal  OpeningPot  BestGains  Voronoi  LocalPot  Mobility  Centrality")
+	for _, pos := range report.Positions {
+		fmt.Printf("  %-3d  %-5d  %-5d  %-6d  %-5d  %-10.2f  %-9s  %-7.1f  %-8.2f  %-8.2f  %.4f\n",
+			pos.PositionIndex,
+			pos.StartTileID,
+			pos.OwnedTiles,
+			pos.StartDegree,
+			pos.LegalMoves,
+			pos.OpeningPotential,
+			formatInts(trimInts(pos.OpeningGains, 3)),
+			pos.VoronoiShare*100,
+			pos.LocalColorPotential,
+			pos.Mobility,
+			pos.Centrality,
+		)
+	}
+}
+
+func parseTileIDs(s string) []int {
+	ids := []int{}
+	for _, part := range strings.Split(s, ",") {
+		id, err := strconv.Atoi(strings.TrimSpace(part))
+		if err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+func trimInts(vals []int, max int) []int {
+	if len(vals) <= max {
+		return vals
+	}
+	return vals[:max]
+}
+
+func formatInts(vals []int) string {
+	parts := make([]string, len(vals))
+	for i, v := range vals {
+		parts[i] = strconv.Itoa(v)
+	}
+	return "[" + strings.Join(parts, ",") + "]"
 }
 
 func runFairnessAnalysis(batchCount int, cfg studyConfig, startTiles string) {
@@ -636,7 +849,6 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			workerRNG := core.CreateRNG(uint32(cfg.seed) + uint32(workerID))
 
 			batchesPerWorker := batchCount / cfg.concurrency
 			if workerID < batchCount%cfg.concurrency {
@@ -644,12 +856,14 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 			}
 
 			for b := 0; b < batchesPerWorker; b++ {
+				batchID := workerID + b*cfg.concurrency
+				boardRNG := core.CreateRNG(deriveSeed(cfg.seed, 0, batchID))
 				opts := tilings.Options{
 					Cols:       cfg.cols,
 					Rows:       cfg.rows,
 					TileSize:   10,
 					ColorCount: cfg.colorCount,
-					RNG:        workerRNG,
+					RNG:        boardRNG,
 				}
 				baseBoard := generateBaseBoard(cfg.boardType, opts)
 				baseBoard = applyConfigMask(baseBoard, cfg.boardType, cfg.mask, cfg.cols)
@@ -663,7 +877,7 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 					startTileIDs = core.FindFairStartTileIds(&baseBoard, playerCount)
 				}
 
-				for _, perm := range perms {
+				for permIndex, perm := range perms {
 					permutedStartTiles := make([]int, playerCount)
 					for i, posIdx := range perm {
 						permutedStartTiles[i] = startTileIDs[posIdx]
@@ -672,7 +886,8 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 					boardCopy := copyBoard(baseBoard)
 					boardCopy.StartTileIds = permutedStartTiles
 
-					res := runGameOnBoard(boardCopy, botNames, cfg, workerRNG)
+					playRNG := core.CreateRNG(deriveSeed(cfg.seed, 1, batchID*len(perms)+permIndex))
+					res := runGameOnBoard(boardCopy, botNames, cfg, playRNG)
 
 					winnerPos := -1
 					if res.winner != -1 {
@@ -761,7 +976,7 @@ func runFairnessSearch(batchCount int, cfg studyConfig) {
 		Rows:       cfg.rows,
 		TileSize:   10,
 		ColorCount: cfg.colorCount,
-		RNG:        core.CreateRNG(uint32(cfg.seed)),
+		RNG:        core.CreateRNG(deriveSeed(cfg.seed, 0, 0)),
 	}
 	sampleBoard := generateBaseBoard(cfg.boardType, sampleOpts)
 	candidates := findCandidateTiles(&sampleBoard)
@@ -812,8 +1027,12 @@ func runFairnessSearch(batchCount int, cfg studyConfig) {
 				for j := 0; j < playerCount; j++ {
 					wr := float64(positionWins[j]) / float64(totalGames)
 					winRates[j] = wr
-					if wr < minWR { minWR = wr }
-					if wr > maxWR { maxWR = wr }
+					if wr < minWR {
+						minWR = wr
+					}
+					if wr > maxWR {
+						maxWR = wr
+					}
 				}
 
 				fairness := maxWR - minWR
@@ -850,10 +1069,18 @@ func findCandidateTiles(board *core.Board) []int {
 	minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
 	for _, t := range board.Tiles {
 		for _, p := range t.Points {
-			if p[0] < minX { minX = p[0] }
-			if p[0] > maxX { maxX = p[0] }
-			if p[1] < minY { minY = p[1] }
-			if p[1] > maxY { maxY = p[1] }
+			if p[0] < minX {
+				minX = p[0]
+			}
+			if p[0] > maxX {
+				maxX = p[0]
+			}
+			if p[1] < minY {
+				minY = p[1]
+			}
+			if p[1] > maxY {
+				maxY = p[1]
+			}
 		}
 	}
 
@@ -954,7 +1181,7 @@ func copyBoard(b core.Board) core.Board {
 	return newBoard
 }
 
-func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng core.RNG) gameResult {
+func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, playRNG core.RNG) gameResult {
 	playerCount := len(botNames)
 	players := make([]core.Player, playerCount)
 	playerBots := make([]bots.Bot, playerCount)
@@ -989,7 +1216,7 @@ func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng co
 
 		switch botNames[i] {
 		case "random":
-			playerBots[i] = &bots.RandomBot{RNG: rng}
+			playerBots[i] = &bots.RandomBot{RNG: playRNG}
 		case "greedy":
 			playerBots[i] = &bots.GreedyBot{}
 		case "aggressive":
@@ -1001,7 +1228,7 @@ func runGameOnBoard(board core.Board, botNames []string, cfg studyConfig, rng co
 		case "spite":
 			playerBots[i] = &bots.SpiteBot{}
 		default:
-			playerBots[i] = &bots.RandomBot{RNG: rng}
+			playerBots[i] = &bots.RandomBot{RNG: playRNG}
 		}
 	}
 

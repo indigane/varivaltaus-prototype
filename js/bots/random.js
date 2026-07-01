@@ -1,4 +1,5 @@
 import { isLegalMove } from '../core/rules.js';
+import { createRNG, mixSeeds } from '../core/rng.js';
 
 export function getMove(state, playerId) {
     const legalColors = [];
@@ -9,5 +10,10 @@ export function getMove(state, playerId) {
     }
 
     if (legalColors.length === 0) return null;
-    return legalColors[Math.floor(Math.random() * legalColors.length)];
+
+    const roll = Number.isFinite(state.playRngSeed)
+        ? createRNG(mixSeeds(state.playRngSeed, state.turnNumber, playerId, state.moveLog?.length || 0))()
+        : Math.random();
+
+    return legalColors[Math.floor(roll * legalColors.length)];
 }
