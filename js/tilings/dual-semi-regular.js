@@ -124,7 +124,7 @@ function boardFromPolygons(polygons, options, generator) {
   return finishBoard(tiles, generator, options.cols, options.rows);
 }
 
-function dualFromPrimalPolygons(primalPolygons, expectedSides, options, generator) {
+function dualFromPrimalPolygons(primalPolygons, expectedSides, options, generator, vertexFilter = null) {
   const primalTiles = primalPolygons
     .filter(points => points.length >= 3)
     .map((points, id) => ({ id, points, center: centroid(points) }));
@@ -162,6 +162,8 @@ function dualFromPrimalPolygons(primalPolygons, expectedSides, options, generato
   const vertexToDualId = new Map();
 
   for (const key of vertexOrder) {
+    if (vertexFilter && !vertexFilter.has(key)) continue;
+
     const entry = vertexMap.get(key);
     const tileIds = [...entry.tileIds];
     if (tileIds.length !== expectedSides) continue;
@@ -275,7 +277,7 @@ function elongatedTriangularPrimalPolygons(cols, rows, a) {
   return polygons;
 }
 
-function snubTrihexagonalPrimalPolygons(cols, rows, a) {
+function snubTrihexagonalPrimalPolygons(cols, rows, a, padding = 0) {
   const d = a * Math.sqrt(7);
   const alpha = Math.atan(Math.sqrt(3) / 5);
   const polygons = [];
@@ -291,9 +293,10 @@ function snubTrihexagonalPrimalPolygons(cols, rows, a) {
     return id;
   };
 
-  for (let r = 0; r < rows; r++) {
-    for (let q = 0; q < cols; q++) {
-      const center = [d * (q + (r % 2) / 2), d * (Math.sqrt(3) / 2) * r];
+  for (let r = -padding; r < rows + padding; r++) {
+    const rOffset = (r % 2 === 0) ? 0 : 0.5;
+    for (let q = -padding; q < cols + padding; q++) {
+      const center = [d * (q + rOffset), d * (Math.sqrt(3) / 2) * r];
       const hex = [];
       for (let i = 0; i < 6; i++) {
         const angle = alpha + 60 * i * Math.PI / 180;
@@ -462,10 +465,32 @@ export function generatePrismaticPentagonalBoard(options) {
 }
 
 export function generateFloretPentagonalBoard(options) {
+  const { cols, rows, tileSize: a } = options;
+  const padding = 1;
+  const primalPolygons = snubTrihexagonalPrimalPolygons(cols, rows, a, padding);
+
+  const coreVertexKeys = new Set();
+  const d = a * Math.sqrt(7);
+  const alpha = Math.atan(Math.sqrt(3) / 5);
+
+  for (let r = 0; r < rows; r++) {
+    const rOffset = (r % 2 === 0) ? 0 : 0.5;
+    for (let q = 0; q < cols; q++) {
+      const cx = d * (q + rOffset);
+      const cy = d * (Math.sqrt(3) / 2) * r;
+      for (let i = 0; i < 6; i++) {
+        const angle = alpha + (i * 60) * Math.PI / 180;
+        const p = [cx + a * Math.cos(angle), cy + a * Math.sin(angle)];
+        coreVertexKeys.add(pointKey(p));
+      }
+    }
+  }
+
   return dualFromPrimalPolygons(
-    snubTrihexagonalPrimalPolygons(options.cols, options.rows, options.tileSize),
+    primalPolygons,
     5,
     options,
-    'pentagon-floret'
+    'pentagon-floret',
+    coreVertexKeys
   );
 }
