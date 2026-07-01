@@ -53,15 +53,18 @@ const BOTS = {
 
 /**
  * Manual fine-tuning for specific tiling and shape combinations.
- * dx, dy are in pixels (applied before scaling/centering).
+ * dx, dy are in pixels (applied after initial centering).
  * scale is a multiplier for the mask's radius.
+ * rotation is in degrees (clockwise).
  */
 const MASK_ADJUSTMENTS = {
     // Example:
     // 'triakis-triangular': {
-    //     'triangular': { dx: 0, dy: 10, scale: 0.98 }
+    //     'triangular': { dx: 0, dy: 0, scale: 1.0, rotation: 30 }
     // }
 };
+
+const MASK_DEBUG = false;
 
 function init() {
     renderer = new CanvasRenderer('game-canvas');
@@ -169,24 +172,28 @@ function handleStart() {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'random' });
     }
 
-    const adj = (MASK_ADJUSTMENTS[boardType] && MASK_ADJUSTMENTS[boardType][boardShape]) || { dx: 0, dy: 0, scale: 1.0 };
+    const adj = (MASK_ADJUSTMENTS[boardType] && MASK_ADJUSTMENTS[boardType][boardShape]) || { dx: 0, dy: 0, scale: 1.0, rotation: 0 };
+    const rotationRad = (adj.rotation || 0) * Math.PI / 180;
 
     if (boardShape === 'circular') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, circularMask(cx, cy, radius));
+        if (MASK_DEBUG) board.debugMask = { shape: 'circular', cx, cy, radius, rotation: rotationRad };
     } else if (boardShape === 'triangular' && boardType !== 'triangle') {
         // Shift centerY so mask is centered vertically based on its bounding box
         const cx = board.width / 2 + adj.dx;
         const radius = Math.min(board.width, board.height) * 0.5 * adj.scale;
         const cy = board.height / 2 + radius / 4 + adj.dy;
-        board = applyMask(board, triangularMask(cx, cy, radius));
+        board = applyMask(board, triangularMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'triangular', cx, cy, radius, rotation: rotationRad };
     } else if (boardShape === 'hexagonal' && boardType !== 'hex') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
-        board = applyMask(board, hexagonalMask(cx, cy, radius));
+        board = applyMask(board, hexagonalMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'hexagonal', cx, cy, radius, rotation: rotationRad };
     }
 
     board.startTileIds = findFairStartTileIds(board, configs.length);

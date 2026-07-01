@@ -174,15 +174,16 @@ func runSimulation(gameCount int, cfg studyConfig) {
 }
 
 type maskAdjustment struct {
-	dx    float64
-	dy    float64
-	scale float64
+	dx       float64
+	dy       float64
+	scale    float64
+	rotation float64
 }
 
 var maskAdjustments = map[string]map[string]maskAdjustment{
 // Example:
 // "triakis-triangular": {
-//     "triangular": {dy: 10, scale: 0.98},
+//     "triangular": {dy: 0, scale: 1.0, rotation: 0},
 // },
 }
 
@@ -229,6 +230,7 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 
 		cx += adj.dx
 		cy += adj.dy
+		rotationRad := adj.rotation * math.Pi / 180
 
 		switch cfg.mask {
 		case "circular":
@@ -236,10 +238,10 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 			board = tilings.ApplyMask(board, tilings.CircularMask(cx, cy, radius))
 		case "triangular":
 			radius := math.Min(maxX-minX, maxY-minY) * 0.5 * adj.scale
-			board = tilings.ApplyMask(board, tilings.TriangularMask(cx, cy+radius/4, radius))
+			board = tilings.ApplyMask(board, tilings.TriangularMask(cx, cy+radius/4, radius, rotationRad))
 		case "hexagonal":
 			radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
-			board = tilings.ApplyMask(board, tilings.HexagonalMask(cx, cy, radius))
+			board = tilings.ApplyMask(board, tilings.HexagonalMask(cx, cy, radius, rotationRad))
 		}
 	}
 
@@ -627,6 +629,7 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 
 					cx += adj.dx
 					cy += adj.dy
+					rotationRad := adj.rotation * math.Pi / 180
 
 					switch cfg.mask {
 					case "circular":
@@ -634,10 +637,10 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 						baseBoard = tilings.ApplyMask(baseBoard, tilings.CircularMask(cx, cy, radius))
 					case "triangular":
 						radius := math.Min(maxX-minX, maxY-minY) * 0.5 * adj.scale
-						baseBoard = tilings.ApplyMask(baseBoard, tilings.TriangularMask(cx, cy+radius/4, radius))
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.TriangularMask(cx, cy+radius/4, radius, rotationRad))
 					case "hexagonal":
 						radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
-						baseBoard = tilings.ApplyMask(baseBoard, tilings.HexagonalMask(cx, cy, radius))
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.HexagonalMask(cx, cy, radius, rotationRad))
 					}
 				}
 

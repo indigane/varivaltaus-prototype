@@ -71,21 +71,29 @@ export function randomMask(probability) {
     return () => Math.random() < probability;
 }
 
-export function triangularMask(centerX, centerY, radius) {
+export function triangularMask(centerX, centerY, radius, rotation = 0) {
+    const cos = Math.cos(-rotation);
+    const sin = Math.sin(-rotation);
     return (x, y) => {
         const dx = x - centerX;
         const dy = y - centerY;
-        return dy <= radius / 2 &&
-               dy + Math.sqrt(3) * dx >= -radius &&
-               dy - Math.sqrt(3) * dx >= -radius;
+        const rdx = dx * cos - dy * sin;
+        const rdy = dx * sin + dy * cos;
+        return rdy <= radius / 2 &&
+               rdy + Math.sqrt(3) * rdx >= -radius &&
+               rdy - Math.sqrt(3) * rdx >= -radius;
     };
 }
 
-export function hexagonalMask(centerX, centerY, radius) {
+export function hexagonalMask(centerX, centerY, radius, rotation = 0) {
+    const cos = Math.cos(-rotation);
+    const sin = Math.sin(-rotation);
     return (x, y) => {
         const dx = x - centerX;
         const dy = y - centerY;
-        return Math.abs(dx) <= radius * Math.sqrt(3) / 2 &&
-               Math.abs(dy) + Math.abs(dx) / Math.sqrt(3) <= radius;
+        const rdx = dx * cos - dy * sin;
+        const rdy = dx * sin + dy * cos;
+        return Math.abs(rdx) <= radius * Math.sqrt(3) / 2 &&
+               Math.abs(rdy) + Math.abs(rdx) / Math.sqrt(3) <= radius;
     };
 }

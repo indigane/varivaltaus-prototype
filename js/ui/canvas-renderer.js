@@ -39,6 +39,10 @@ export class CanvasRenderer {
             const boundaryEdges = this._collectBoundaryEdges(edgeMap);
             this.drawFlatBoundaries(boundaryEdges);
         }
+
+        if (board.debugMask) {
+            this.drawDebugMask(board.debugMask);
+        }
     }
 
     clear() {
@@ -601,5 +605,43 @@ export class CanvasRenderer {
 
     _pointKey(p) {
         return `${p[0].toFixed(2)},${p[1].toFixed(2)}`;
+    }
+
+    // ─── Debug Rendering ─────────────────────────────────────
+
+    drawDebugMask(debugMask) {
+        const { ctx, scale, offsetX, offsetY } = this;
+        const { shape, cx, cy, radius, rotation = 0 } = debugMask;
+
+        ctx.save();
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.translate(cx * scale + offsetX, cy * scale + offsetY);
+        ctx.rotate(rotation);
+        ctx.beginPath();
+
+        const sr = radius * scale;
+
+        if (shape === 'circular') {
+            ctx.arc(0, 0, sr, 0, Math.PI * 2);
+        } else if (shape === 'triangular') {
+            ctx.moveTo(0, -sr);
+            ctx.lineTo(sr * Math.sqrt(3) / 2, sr / 2);
+            ctx.lineTo(-sr * Math.sqrt(3) / 2, sr / 2);
+            ctx.closePath();
+        } else if (shape === 'hexagonal') {
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 180) * (60 * i - 30);
+                const px = sr * Math.cos(angle);
+                const py = sr * Math.sin(angle);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+        }
+
+        ctx.stroke();
+        ctx.restore();
     }
 }
