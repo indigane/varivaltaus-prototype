@@ -494,7 +494,7 @@ function initTeamsToggle() {
         } else {
             panel.style.display = 'none';
             territorySelect.style.display = 'none';
-            // Everyone on their own team
+            // Everyone on their own team, but re-normalize to 0..N-1
             playerConfigs.forEach((c, i) => { c.teamId = i; });
         }
         renderTeamAssign();
@@ -616,6 +616,18 @@ function renderPlayerSetup() {
             removeBtn.textContent = '×';
             removeBtn.onclick = () => {
                 playerConfigs.splice(index, 1);
+                // After removal, re-normalize teamIds if teams are disabled
+                if (!teamsEnabled) {
+                    playerConfigs.forEach((c, i) => { c.teamId = i; });
+                } else {
+                    // If teams are enabled, we should at least ensure they are within a reasonable range
+                    // but the user can re-assign them in the team panel.
+                    // A simple normalization here helps keep things clean.
+                    const uniqueTeams = [...new Set(playerConfigs.map(c => c.teamId))].sort((a, b) => a - b);
+                    const tMap = new Map();
+                    uniqueTeams.forEach((tid, i) => tMap.set(tid, i));
+                    playerConfigs.forEach(c => c.teamId = tMap.get(c.teamId));
+                }
                 renderPlayerSetup();
                 renderTeamAssign();
             };

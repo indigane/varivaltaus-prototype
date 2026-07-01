@@ -298,8 +298,15 @@ func ComputePlayerScores(state *GameState) []int {
 
 func ComputeTeamScores(state *GameState, playerScores []int) []int {
 	scores := make([]int, len(state.Teams))
+	teamIDToIndex := make(map[int]int)
+	for i, team := range state.Teams {
+		teamIDToIndex[team.ID] = i
+	}
+
 	for i := range state.Players {
-		scores[state.Players[i].TeamID] += playerScores[i]
+		if index, ok := teamIDToIndex[state.Players[i].TeamID]; ok {
+			scores[index] += playerScores[i]
+		}
 	}
 	return scores
 }

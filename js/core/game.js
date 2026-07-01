@@ -113,8 +113,8 @@ export function createGame(config) {
   });
 
   const teamScores = computeTeamScores(state, playerScores);
-  teamScores.forEach((score, id) => {
-    state.teams[id].score = score;
+  teamScores.forEach((score, index) => {
+    state.teams[index].score = score;
   });
 
   return state;
@@ -136,8 +136,8 @@ export function applyMove(state, playerId, colorId) {
 
   // Update team scores
   const teamScores = computeTeamScores(newState, playerScores);
-  teamScores.forEach((score, id) => {
-    newState.teams[id].score = score;
+  teamScores.forEach((score, index) => {
+    newState.teams[index].score = score;
   });
 
   newState.moveLog.push({
