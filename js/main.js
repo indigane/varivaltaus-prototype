@@ -259,7 +259,12 @@ function handleStart() {
         if (MASK_DEBUG) board.debugMask = { shape: 'plus', cx, cy, radius, thick, rotation: rotationRad };
     }
 
-    board.startTileIds = findFairStartTileIds(board, configs.length);
+    board.startTileIds = findFairStartTileIds(board, configs.length, {
+        boardType,
+        boardShape,
+        cols,
+        rows
+    });
 
     const players = configs.map((c, i) => ({
         id: i,
