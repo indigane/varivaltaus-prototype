@@ -594,7 +594,7 @@ function renderPlayerSetup() {
         nameInput.type = 'text';
         nameInput.value = config.name;
         nameInput.placeholder = "Name";
-        nameInput.onchange = (e) => { config.name = e.target.value; renderTeamAssign(); };
+        nameInput.onchange = (e) => { config.name = e.target.value; renderTeamAssign(); notifyPlayerConfigsChanged(); };
 
         const controlSelect = document.createElement('select');
         const controls = ["human", "random", "greedy", "aggressive", "lookahead", "hybrid", "spite"];
@@ -605,7 +605,7 @@ function renderPlayerSetup() {
             if (config.control === c) opt.selected = true;
             controlSelect.appendChild(opt);
         });
-        controlSelect.onchange = (e) => config.control = e.target.value;
+        controlSelect.onchange = (e) => { config.control = e.target.value; notifyPlayerConfigsChanged(); };
 
         row.appendChild(nameInput);
         row.appendChild(controlSelect);
@@ -627,4 +627,9 @@ function renderPlayerSetup() {
 
     initTeamsToggle();
     renderTeamAssign();
+    notifyPlayerConfigsChanged();
+}
+
+function notifyPlayerConfigsChanged() {
+    document.dispatchEvent(new CustomEvent('player-configs-changed', { detail: { players: playerConfigs.length } }));
 }

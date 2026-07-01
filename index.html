@@ -147,6 +147,46 @@
                 </div>
             </div>
 
+            <div class="setup-section fairness-setup-section">
+                <div class="section-heading">
+                    <span class="section-icon">⚖</span> Board Fairness
+                </div>
+                <label class="check-label fairness-master-toggle"><input type="checkbox" id="human-fairness-enabled"> Filter generated boards <span class="experimental-label">experimental</span></label>
+                <div class="setup-grid fairness-options" id="human-fairness-options">
+                    <div class="setup-group">
+                        <label for="human-fairness-mode">Mode</label>
+                        <select id="human-fairness-mode" disabled>
+                            <option value="balanced">Balanced</option>
+                            <option value="handicap">Handicap</option>
+                        </select>
+                    </div>
+                    <div class="setup-group" id="human-fairness-target-group">
+                        <label for="human-fairness-target">Favored Player</label>
+                        <select id="human-fairness-target" disabled>
+                            <option value="0">Player 1</option>
+                            <option value="1">Player 2</option>
+                        </select>
+                    </div>
+                    <div class="setup-group" id="human-fairness-threshold-group">
+                        <label>Balanced Threshold <output id="human-fairness-threshold-val">0.10</output></label>
+                        <input type="range" id="human-fairness-threshold" value="0.10" min="0.03" max="0.30" step="0.01" disabled oninput="document.getElementById('human-fairness-threshold-val').textContent=Number(this.value).toFixed(2)">
+                    </div>
+                    <div class="setup-group" id="human-fairness-strength-group">
+                        <label for="human-fairness-strength">Handicap Strength</label>
+                        <select id="human-fairness-strength" disabled>
+                            <option value="mild">Mild bias</option>
+                            <option value="medium">Medium bias</option>
+                            <option value="strong">Strong bias</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
+                        <label>Max Attempts <output id="human-fairness-attempts-val">32</output></label>
+                        <input type="range" id="human-fairness-attempts" value="32" min="1" max="128" step="1" disabled oninput="document.getElementById('human-fairness-attempts-val').textContent=this.value">
+                    </div>
+                </div>
+                <p class="fairness-help">Off by default. Uses static human-position heuristics only; no bot games are simulated.</p>
+            </div>
+
             <div class="setup-section">
                 <div class="section-heading">
                     <span class="section-icon">👤</span> Players
@@ -172,6 +212,7 @@
     <div id="game-screen" hidden>
         <div id="game-top-bar">
             <div id="scoreboard"></div>
+            <div id="fairness-badge" class="fairness-badge" hidden></div>
             <div id="turn-counter">
                 <span class="turn-label">Turn</span>
                 <span id="turn-count">0</span>

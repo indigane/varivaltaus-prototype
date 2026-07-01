@@ -9,6 +9,7 @@ export function createGame(config) {
     colorCount,
     paletteId,
     rngSeed,
+    playRngSeed = rngSeed,
     rules = defaultRules()
   } = config;
 
@@ -23,6 +24,7 @@ export function createGame(config) {
     rules,
     turnNumber: 0,
     rngSeed,
+    playRngSeed,
     moveLog: [],
     status: "playing"
   };

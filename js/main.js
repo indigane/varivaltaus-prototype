@@ -1,4 +1,4 @@
-import { createRNG } from './core/rng.js';
+import { createRNG, mixSeeds } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
 import { generateBrickBoard } from './tilings/brick.js';
 import { generateTriangleBoard } from './tilings/triangle.js';
@@ -35,6 +35,7 @@ import {
     plusMask
 } from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
+import { evaluateHumanFairness, acceptsFairnessReport, describeFairnessReport } from './core/human-fairness.js';
 import { createGame, applyMove } from './core/game.js';
 import { CanvasRenderer } from './ui/canvas-renderer.js';
 import { setupUI, updateStats, getPlayerConfigs, setPlayerConfigs } from './ui/input.js';
@@ -84,6 +85,7 @@ function init() {
     if (savedPlayers) setPlayerConfigs(savedPlayers);
 
     setupUI(null, handleColorSelect, handleReset, handleStep, handleTogglePlay);
+    setupHumanFairnessControls();
 
     document.getElementById('start-button').onclick = handleStart;
 
@@ -101,6 +103,84 @@ function init() {
     }
 }
 
+function setupHumanFairnessControls() {
+    const enabled = document.getElementById('human-fairness-enabled');
+    const mode = document.getElementById('human-fairness-mode');
+    const threshold = document.getElementById('human-fairness-threshold');
+    const attempts = document.getElementById('human-fairness-attempts');
+    const strength = document.getElementById('human-fairness-strength');
+    const target = document.getElementById('human-fairness-target');
+
+    if (!enabled) return;
+
+    const update = () => updateHumanFairnessControlState();
+    enabled.onchange = update;
+    if (mode) mode.onchange = update;
+    if (threshold) threshold.oninput = (event) => {
+        const output = document.getElementById('human-fairness-threshold-val');
+        if (output) output.textContent = Number(event.target.value).toFixed(2);
+    };
+    if (attempts) attempts.oninput = (event) => {
+        const output = document.getElementById('human-fairness-attempts-val');
+        if (output) output.textContent = event.target.value;
+    };
+    if (strength) strength.onchange = update;
+    if (target) target.onchange = update;
+
+    document.addEventListener('player-configs-changed', update);
+    update();
+}
+
+function updateHumanFairnessControlState() {
+    const enabled = document.getElementById('human-fairness-enabled');
+    const mode = document.getElementById('human-fairness-mode');
+    const target = document.getElementById('human-fairness-target');
+    const threshold = document.getElementById('human-fairness-threshold');
+    const attempts = document.getElementById('human-fairness-attempts');
+    const strength = document.getElementById('human-fairness-strength');
+    const targetGroup = document.getElementById('human-fairness-target-group');
+    const thresholdGroup = document.getElementById('human-fairness-threshold-group');
+    const strengthGroup = document.getElementById('human-fairness-strength-group');
+    if (!enabled || !mode) return;
+
+    const isEnabled = enabled.checked;
+    const isHandicap = mode.value === 'handicap';
+
+    refreshHumanFairnessTargetOptions();
+
+    mode.disabled = !isEnabled;
+    if (target) target.disabled = !isEnabled || !isHandicap;
+    if (threshold) threshold.disabled = !isEnabled || isHandicap;
+    if (attempts) attempts.disabled = !isEnabled;
+    if (strength) strength.disabled = !isEnabled || !isHandicap;
+
+    if (targetGroup) targetGroup.hidden = !isHandicap;
+    if (thresholdGroup) thresholdGroup.hidden = isHandicap;
+    if (strengthGroup) strengthGroup.hidden = !isHandicap;
+}
+
+function refreshHumanFairnessTargetOptions() {
+    const target = document.getElementById('human-fairness-target');
+    if (!target) return;
+
+    const currentValue = target.value;
+    const configs = getPlayerConfigs();
+    target.innerHTML = '';
+
+    configs.forEach((config, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = config.name || `Player ${index + 1}`;
+        target.appendChild(option);
+    });
+
+    if ([...target.options].some(option => option.value === currentValue)) {
+        target.value = currentValue;
+    } else if (target.options.length > 0) {
+        target.value = target.options[0].value;
+    }
+}
+
 function updateTileStyleOptions(style) {
     const embossOpts = document.getElementById('emboss-options');
     const gutterOpts = document.getElementById('gutter-options');
@@ -112,6 +192,38 @@ function handleStart() {
     const configs = getPlayerConfigs();
     saveSettings(configs);
 
+    const gameConfig = readGameConfig(configs);
+    const fairnessConfig = readHumanFairnessConfig(configs);
+    const baseSeed = Math.floor(Math.random() * 1000000);
+    const candidate = createFilteredGameState(gameConfig, fairnessConfig, baseSeed);
+
+    gameState = candidate.state;
+    gameState.tileStyle = gameConfig.tileStyle;
+    gameState.embossSize = parseFloat(document.getElementById('emboss-size').value);
+    gameState.embossOpacity = parseInt(document.getElementById('emboss-opacity').value) / 100;
+    gameState.gutterSize = parseInt(document.getElementById('gutter-size').value) / 100;
+    gameState.fairnessReport = candidate.report;
+    gameState.fairnessFiltering = candidate.filtering;
+
+    setupUI(gameState, handleColorSelect, handleReset, handleStep, handleTogglePlay);
+    updateFairnessBadge(gameState);
+    renderer.render(gameState);
+
+    const hasBots = configs.some(c => c.control !== 'human');
+    if (hasBots) {
+        isPlaying = true;
+        const btn = document.getElementById('play-pause-button');
+        if (btn) btn.textContent = '⏸';
+    }
+
+    if (isPlaying) {
+        startAutoplay();
+    } else {
+        checkBotTurn();
+    }
+}
+
+function readGameConfig(configs) {
     const boardType = document.getElementById('board-type').value;
     const boardShape = document.getElementById('board-shape').value;
     let cols = parseInt(document.getElementById('board-cols').value);
@@ -121,22 +233,172 @@ function handleStart() {
         cols = size;
         rows = size;
     }
-    const tileSize = 25;
-    const colorCount = parseInt(document.getElementById('color-count').value);
-    const colorRestrictions = document.getElementById('color-restrictions').value;
-    const paletteId = document.getElementById('palette').value;
-    const turnOrder = document.getElementById('turn-order').value;
-    const teamTerritory = document.getElementById('team-territory').value;
-    const tileStyle = document.getElementById('tile-style').value;
-    const startingAreaSize = parseInt(document.getElementById('starting-area-size').value);
-    const startingAreaBuffer = document.getElementById('starting-area-buffer').checked;
-    const allowSameStartingColor = document.getElementById('allow-same-starting-color').checked;
 
-    const seed = Math.floor(Math.random() * 1000000);
+    return {
+        configs,
+        boardType,
+        boardShape,
+        cols,
+        rows,
+        tileSize: 25,
+        colorCount: parseInt(document.getElementById('color-count').value),
+        colorRestrictions: document.getElementById('color-restrictions').value,
+        paletteId: document.getElementById('palette').value,
+        turnOrder: document.getElementById('turn-order').value,
+        teamTerritory: document.getElementById('team-territory').value,
+        tileStyle: document.getElementById('tile-style').value,
+        startingAreaSize: parseInt(document.getElementById('starting-area-size').value),
+        startingAreaBuffer: document.getElementById('starting-area-buffer').checked,
+        allowSameStartingColor: document.getElementById('allow-same-starting-color').checked
+    };
+}
+
+function readHumanFairnessConfig(configs) {
+    const enabled = Boolean(document.getElementById('human-fairness-enabled')?.checked);
+    const mode = document.getElementById('human-fairness-mode')?.value || 'balanced';
+    const strength = document.getElementById('human-fairness-strength')?.value || 'mild';
+    const targetPlayerId = parseInt(document.getElementById('human-fairness-target')?.value || '0', 10);
+    const maxAttempts = clamp(parseInt(document.getElementById('human-fairness-attempts')?.value || '32', 10), 1, 256);
+    const threshold = parseFloat(document.getElementById('human-fairness-threshold')?.value || '0.10');
+
+    const handicapRanges = {
+        mild: [0.10, 0.20],
+        medium: [0.20, 0.30],
+        strong: [0.30, 0.50]
+    };
+    const [handicapMin, handicapMax] = handicapRanges[strength] || handicapRanges.mild;
+
+    return {
+        enabled: enabled && configs.length >= 2,
+        mode: enabled ? mode : 'off',
+        threshold,
+        strength,
+        handicapMin,
+        handicapMax,
+        targetPlayerId,
+        maxAttempts
+    };
+}
+
+function createFilteredGameState(gameConfig, fairnessConfig, baseSeed) {
+    const attempts = fairnessConfig.enabled ? fairnessConfig.maxAttempts : 1;
+    let best = null;
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        const boardSeed = (baseSeed + attempt) >>> 0;
+        const candidate = createGameStateForSeed(gameConfig, boardSeed);
+        const report = evaluateHumanFairness(candidate.state);
+        const filtering = {
+            enabled: fairnessConfig.enabled,
+            mode: fairnessConfig.mode,
+            accepted: acceptsFairnessReport(report, fairnessConfig),
+            attempt: attempt + 1,
+            maxAttempts: attempts,
+            boardSeed,
+            baseSeed,
+            playSeed: candidate.playSeed,
+            bestEffort: false
+        };
+
+        const scored = { ...candidate, report, filtering };
+
+        if (!best || isBetterFairnessCandidate(scored, best, fairnessConfig)) {
+            best = scored;
+        }
+
+        if (!fairnessConfig.enabled || filtering.accepted) {
+            return scored;
+        }
+    }
+
+    if (best) {
+        best.filtering.accepted = false;
+        best.filtering.bestEffort = true;
+        return best;
+    }
+
+    return createGameStateForSeed(gameConfig, baseSeed);
+}
+
+function isBetterFairnessCandidate(candidate, best, fairnessConfig) {
+    if (!fairnessConfig.enabled) return false;
+
+    if (fairnessConfig.mode === 'handicap') {
+        const candidateTargetsPlayer = candidate.report.favoredPlayerId === fairnessConfig.targetPlayerId;
+        const bestTargetsPlayer = best.report.favoredPlayerId === fairnessConfig.targetPlayerId;
+        if (candidateTargetsPlayer !== bestTargetsPlayer) return candidateTargetsPlayer;
+
+        const targetMid = (fairnessConfig.handicapMin + fairnessConfig.handicapMax) / 2;
+        return Math.abs(candidate.report.score - targetMid) < Math.abs(best.report.score - targetMid);
+    }
+
+    return candidate.report.score < best.report.score;
+}
+
+function createGameStateForSeed(gameConfig, boardSeed) {
+    const board = generateConfiguredBoard(gameConfig, boardSeed);
+
+    board.startTileIds = findFairStartTileIds(board, gameConfig.configs.length, {
+        boardType: gameConfig.boardType,
+        boardShape: gameConfig.boardShape,
+        cols: gameConfig.cols,
+        rows: gameConfig.rows
+    });
+
+    const { players, teams } = buildPlayersAndTeams(gameConfig.configs);
+    const playSeed = mixSeeds(boardSeed, 0x706c6179); // independent "play" stream
+
+    const state = createGame({
+        board,
+        players,
+        teams,
+        colorCount: gameConfig.colorCount,
+        paletteId: gameConfig.paletteId,
+        rngSeed: boardSeed,
+        playRngSeed: playSeed,
+        rules: {
+            winCondition: "mostTiles",
+            turnOrder: gameConfig.turnOrder,
+            teamTerritory: gameConfig.teamTerritory,
+            captureMode: "neutralOnly",
+            colorRestrictions: gameConfig.colorRestrictions,
+            startingPositions: "corners",
+            maxTurns: 500,
+            startingAreaSize: gameConfig.startingAreaSize,
+            startingAreaBuffer: gameConfig.startingAreaBuffer,
+            allowSameStartingColor: gameConfig.allowSameStartingColor
+        }
+    });
+
+    return { state, boardSeed, playSeed };
+}
+
+function buildPlayersAndTeams(configs) {
+    const players = configs.map((c, i) => ({
+        id: i,
+        name: c.name,
+        teamId: c.teamId,
+        control: c.control,
+        alive: true,
+        score: 0
+    }));
+
+    const teamIds = [...new Set(players.map(p => p.teamId))];
+    const teams = teamIds.map(id => ({
+        id,
+        name: `Team ${id}`,
+        playerIds: players.filter(p => p.teamId === id).map(p => p.id),
+        score: 0
+    }));
+
+    return { players, teams };
+}
+
+function generateConfiguredBoard(gameConfig, seed) {
     const rng = createRNG(seed);
-
-    let board;
+    const { boardType, boardShape, cols, rows, tileSize, colorCount } = gameConfig;
     const commonOptions = { colorCount, rng };
+    let board;
 
     if (boardType === 'square') {
         board = generateSquareBoard({ ...commonOptions, cols, rows, tileSize });
@@ -185,10 +447,16 @@ function handleStart() {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'jittered' });
     } else if (boardType === 'voronoi-random') {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'random' });
+    } else {
+        board = generateSquareBoard({ ...commonOptions, cols, rows, tileSize });
     }
 
+    return applyConfiguredMask(board, gameConfig);
+}
+
+function applyConfiguredMask(board, gameConfig) {
+    const { boardType, boardShape, cols } = gameConfig;
     const adjLookup = (MASK_ADJUSTMENTS[boardType] && MASK_ADJUSTMENTS[boardType][boardShape]) || { dx: 0, dy: 0, scale: 1.0, rotation: 0 };
-    // Support size-specific adjustments: if adjLookup[cols] exists, use it
     const adj = adjLookup[cols] || adjLookup;
     const rotationRad = (adj.rotation || 0) * Math.PI / 180;
 
@@ -199,7 +467,6 @@ function handleStart() {
         board = applyMask(board, circularMask(cx, cy, radius));
         if (MASK_DEBUG) board.debugMask = { shape: 'circular', cx, cy, radius, rotation: rotationRad };
     } else if (boardShape === 'triangular' && boardType !== 'triangle') {
-        // Shift centerY so mask is centered vertically based on its bounding box
         const cx = board.width / 2 + adj.dx;
         const radius = Math.min(board.width, board.height) * 0.5 * adj.scale;
         const cy = board.height / 2 + radius / 4 + adj.dy;
@@ -259,71 +526,34 @@ function handleStart() {
         if (MASK_DEBUG) board.debugMask = { shape: 'plus', cx, cy, radius, thick, rotation: rotationRad };
     }
 
-    board.startTileIds = findFairStartTileIds(board, configs.length, {
-        boardType,
-        boardShape,
-        cols,
-        rows
-    });
+    return board;
+}
 
-    const players = configs.map((c, i) => ({
-        id: i,
-        name: c.name,
-        teamId: c.teamId,
-        control: c.control,
-        alive: true,
-        score: 0
-    }));
+function updateFairnessBadge(state) {
+    const badge = document.getElementById('fairness-badge');
+    if (!badge) return;
 
-    const teamIds = [...new Set(players.map(p => p.teamId))];
-    const teams = teamIds.map(id => ({
-        id: id,
-        name: `Team ${id}`,
-        playerIds: players.filter(p => p.teamId === id).map(p => p.id),
-        score: 0
-    }));
-
-    gameState = createGame({
-        board,
-        players,
-        teams,
-        colorCount,
-        paletteId,
-        rngSeed: seed,
-        rules: {
-            winCondition: "mostTiles",
-            turnOrder,
-            teamTerritory,
-            captureMode: "neutralOnly",
-            colorRestrictions,
-            startingPositions: "corners",
-            maxTurns: 500,
-            startingAreaSize,
-            startingAreaBuffer,
-            allowSameStartingColor
-        }
-    });
-
-    gameState.tileStyle = tileStyle;
-    gameState.embossSize = parseFloat(document.getElementById('emboss-size').value);
-    gameState.embossOpacity = parseInt(document.getElementById('emboss-opacity').value) / 100;
-    gameState.gutterSize = parseInt(document.getElementById('gutter-size').value) / 100;
-
-    setupUI(gameState, handleColorSelect, handleReset, handleStep, handleTogglePlay);
-    renderer.render(gameState);
-
-    const hasBots = configs.some(c => c.control !== 'human');
-    if (hasBots) {
-        isPlaying = true;
-        const btn = document.getElementById('play-pause-button');
-        if (btn) btn.textContent = '⏸';
+    if (!state?.fairnessReport) {
+        badge.hidden = true;
+        badge.textContent = '';
+        return;
     }
 
-    if (isPlaying) {
-        startAutoplay();
-    } else {
-        checkBotTurn();
-    }
+    const filtering = state.fairnessFiltering || {};
+    const suffix = filtering.enabled
+        ? filtering.accepted
+            ? ` · accepted ${filtering.attempt}/${filtering.maxAttempts}`
+            : ` · best of ${filtering.maxAttempts}`
+        : '';
+
+    badge.textContent = `${describeFairnessReport(state.fairnessReport)}${suffix}`;
+    badge.className = `fairness-badge fairness-${state.fairnessReport.rating.replace(/\s+/g, '-')}`;
+    badge.hidden = false;
+}
+
+function clamp(value, min, max) {
+    if (!Number.isFinite(value)) return min;
+    return Math.max(min, Math.min(max, value));
 }
 
 function handleColorSelect(colorId) {

@@ -15,6 +15,7 @@
         import { runCairoTests } from './js/tests/cairo-tests.js';
         import { runVoronoiTests } from './js/tests/voronoi-tests.js';
         import { runFairStartTests } from './js/tests/fair-starts-tests.js';
+        import { runHumanFairnessTests } from './js/tests/human-fairness-tests.js';
         runGameTests();
         runBotTests();
         runTilingTests();
@@ -22,6 +23,7 @@
         runCairoTests();
         runVoronoiTests();
         runFairStartTests();
+        runHumanFairnessTests();
         const resultsDiv = document.getElementById('test-results');
         resultsDiv.innerHTML = "Tests completed. Check console.";
     </script>
