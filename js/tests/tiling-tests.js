@@ -1,5 +1,6 @@
 import { validateBoardGraph } from '../core/graph.js';
 import { generateSquareBoard } from '../tilings/square.js';
+import { generateBrickBoard } from '../tilings/brick.js';
 import { generateTriangleBoard } from '../tilings/triangle.js';
 import { generateHexBoard } from '../tilings/hex.js';
 import { generateRhombitrihexagonalBoard } from '../tilings/rhombitrihexagonal.js';
@@ -30,6 +31,7 @@ export function runTilingTests() {
     const options = { cols: 10, rows: 10, tileSize: 20, colorCount: 6, rng };
 
     testGenerator("Square", () => generateSquareBoard(options));
+    testGenerator("Brick", () => generateBrickBoard(options));
     testGenerator("Triangle Rect", () => generateTriangleBoard({ ...options, shape: "rectangular" }));
     testGenerator("Triangle Tri", () => generateTriangleBoard({ ...options, shape: "triangular" }));
     testGenerator("Hex Rect", () => generateHexBoard({ ...options, shape: "rectangular" }));

@@ -1,5 +1,6 @@
 import { createRNG } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
+import { generateBrickBoard } from './tilings/brick.js';
 import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
 import { generateTrihexagonalBoard } from './tilings/trihexagonal.js';
@@ -109,6 +110,8 @@ function handleStart() {
 
     if (boardType === 'square') {
         board = generateSquareBoard({ ...commonOptions, cols, rows, tileSize });
+    } else if (boardType === 'brick') {
+        board = generateBrickBoard({ ...commonOptions, cols, rows, tileSize });
     } else if (boardType === 'triangle') {
         const adjCols = boardShape === 'triangular' ? cols : Math.floor(cols * 1.5);
         board = generateTriangleBoard({ ...commonOptions, cols: adjCols, rows, tileSize: tileSize * 1.2, shape: boardShape === 'triangular' ? 'triangular' : 'rectangular' });
