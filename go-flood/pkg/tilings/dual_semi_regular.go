@@ -179,7 +179,7 @@ type dualPrimalEdgeEntry struct {
 	tileIDs map[int]bool
 }
 
-func dualFromPrimalPolygons(primalPolygons [][]core.Point, expectedSides int, options Options, generator string) core.Board {
+func dualFromPrimalPolygons(primalPolygons [][]core.Point, expectedSides int, options Options, generator string, vertexFilter map[string]bool) core.Board {
 	primalTiles := []dualPrimalTile{}
 	for _, points := range primalPolygons {
 		if len(points) < 3 {
@@ -223,6 +223,10 @@ func dualFromPrimalPolygons(primalPolygons [][]core.Point, expectedSides int, op
 	vertexToDualID := make(map[string]int)
 
 	for _, key := range vertexOrder {
+		if vertexFilter != nil && !vertexFilter[key] {
+			continue
+		}
+
 		entry := vertexMap[key]
 		if len(entry.tileIDs) != expectedSides {
 			continue
@@ -376,7 +380,7 @@ func dualElongatedTriangularPrimalPolygons(cols, rows int, a float64) [][]core.P
 
 type dualCellKey struct{ x, y int }
 
-func dualSnubTrihexagonalPrimalPolygons(cols, rows int, a float64) [][]core.Point {
+func dualSnubTrihexagonalPrimalPolygons(cols, rows int, a float64, padding int) [][]core.Point {
 	d := a * math.Sqrt(7.0)
 	alpha := math.Atan(math.Sqrt(3.0) / 5.0)
 	polygons := [][]core.Point{}
@@ -394,9 +398,13 @@ func dualSnubTrihexagonalPrimalPolygons(cols, rows int, a float64) [][]core.Poin
 		return id
 	}
 
-	for r := 0; r < rows; r++ {
-		for q := 0; q < cols; q++ {
-			center := core.Point{d * (float64(q) + float64(r%2)/2.0), d * (math.Sqrt(3.0) / 2.0) * float64(r)}
+	for r := -padding; r < rows+padding; r++ {
+		rOffset := 0.0
+		if r%2 != 0 {
+			rOffset = 0.5
+		}
+		for q := -padding; q < cols+padding; q++ {
+			center := core.Point{d * (float64(q) + rOffset), d * (math.Sqrt(3.0) / 2.0) * float64(r)}
 			hex := make([]core.Point, 6)
 			for i := 0; i < 6; i++ {
 				angle := alpha + 60.0*float64(i)*math.Pi/180.0
@@ -589,14 +597,40 @@ func GeneratePrismaticPentagonalBoard(options Options) core.Board {
 		5,
 		options,
 		"pentagon-prismatic",
+		nil,
 	)
 }
 
 func GenerateFloretPentagonalBoard(options Options) core.Board {
+	a := options.TileSize
+	padding := 1
+	primalPolygons := dualSnubTrihexagonalPrimalPolygons(options.Cols, options.Rows, a, padding)
+
+	coreVertexKeys := make(map[string]bool)
+	d := a * math.Sqrt(7.0)
+	alpha := math.Atan(math.Sqrt(3.0) / 5.0)
+
+	for r := 0; r < options.Rows; r++ {
+		rOffset := 0.0
+		if r%2 != 0 {
+			rOffset = 0.5
+		}
+		for q := 0; q < options.Cols; q++ {
+			cx := d * (float64(q) + rOffset)
+			cy := d * (math.Sqrt(3.0) / 2.0) * float64(r)
+			for i := 0; i < 6; i++ {
+				angle := alpha + (float64(i)*60.0)*math.Pi/180.0
+				p := core.Point{cx + a*math.Cos(angle), cy + a*math.Sin(angle)}
+				coreVertexKeys[dualPointKey(p)] = true
+			}
+		}
+	}
+
 	return dualFromPrimalPolygons(
-		dualSnubTrihexagonalPrimalPolygons(options.Cols, options.Rows, options.TileSize),
+		primalPolygons,
 		5,
 		options,
 		"pentagon-floret",
+		coreVertexKeys,
 	)
 }
