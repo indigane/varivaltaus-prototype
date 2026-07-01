@@ -51,6 +51,18 @@ const BOTS = {
     spite: getSpiteMove
 };
 
+/**
+ * Manual fine-tuning for specific tiling and shape combinations.
+ * dx, dy are in pixels (applied before scaling/centering).
+ * scale is a multiplier for the mask's radius.
+ */
+const MASK_ADJUSTMENTS = {
+    // Example:
+    // 'triakis-triangular': {
+    //     'triangular': { dx: 0, dy: 10, scale: 0.98 }
+    // }
+};
+
 function init() {
     renderer = new CanvasRenderer('game-canvas');
 
@@ -157,20 +169,23 @@ function handleStart() {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'random' });
     }
 
+    const adj = (MASK_ADJUSTMENTS[boardType] && MASK_ADJUSTMENTS[boardType][boardShape]) || { dx: 0, dy: 0, scale: 1.0 };
+
     if (boardShape === 'circular') {
-        const cx = board.width / 2;
-        const cy = board.height / 2;
-        const radius = Math.min(board.width, board.height) * 0.45;
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, circularMask(cx, cy, radius));
     } else if (boardShape === 'triangular' && boardType !== 'triangle') {
-        const cx = board.width / 2;
-        const cy = board.height / 2;
-        const radius = Math.min(board.width, board.height) * 0.5;
+        // Shift centerY so mask is centered vertically based on its bounding box
+        const cx = board.width / 2 + adj.dx;
+        const radius = Math.min(board.width, board.height) * 0.5 * adj.scale;
+        const cy = board.height / 2 + radius / 4 + adj.dy;
         board = applyMask(board, triangularMask(cx, cy, radius));
     } else if (boardShape === 'hexagonal' && boardType !== 'hex') {
-        const cx = board.width / 2;
-        const cy = board.height / 2;
-        const radius = Math.min(board.width, board.height) * 0.45;
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, hexagonalMask(cx, cy, radius));
     }
 
