@@ -23,7 +23,7 @@ import {
 import { generateOctagonalBoard } from './tilings/octagonal.js';
 import { generatePythagoreanBoard } from './tilings/pythagorean.js';
 import { generateVoronoiBoard } from './tilings/voronoi.js';
-import { applyMask, circularMask } from './tilings/masks.js';
+import { applyMask, circularMask, triangularMask, hexagonalMask } from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
 import { createGame, applyMove } from './core/game.js';
 import { CanvasRenderer } from './ui/canvas-renderer.js';
@@ -160,8 +160,18 @@ function handleStart() {
     if (boardShape === 'circular') {
         const cx = board.width / 2;
         const cy = board.height / 2;
-        const radius = Math.min(board.width, board.height) * 0.4;
+        const radius = Math.min(board.width, board.height) * 0.45;
         board = applyMask(board, circularMask(cx, cy, radius));
+    } else if (boardShape === 'triangular' && boardType !== 'triangle') {
+        const cx = board.width / 2;
+        const cy = board.height / 2;
+        const radius = Math.min(board.width, board.height) * 0.5;
+        board = applyMask(board, triangularMask(cx, cy, radius));
+    } else if (boardShape === 'hexagonal' && boardType !== 'hex') {
+        const cx = board.width / 2;
+        const cy = board.height / 2;
+        const radius = Math.min(board.width, board.height) * 0.45;
+        board = applyMask(board, hexagonalMask(cx, cy, radius));
     }
 
     board.startTileIds = findFairStartTileIds(board, configs.length);

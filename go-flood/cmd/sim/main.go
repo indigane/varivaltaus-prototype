@@ -33,7 +33,7 @@ func main() {
 	startAreaSizeFlag := flag.Int("start-area-size", 1, "Starting area size")
 	startAreaBufferFlag := flag.Bool("start-area-buffer", true, "Whether to apply starting area buffer")
 	turnOrderFlag := flag.String("turn-order", "players", "Turn order: players or snake")
-	maskFlag := flag.String("mask", "", "Mask: none or circular")
+	maskFlag := flag.String("mask", "", "Mask: none, circular, triangular, hexagonal")
 
 	flag.Parse()
 
@@ -195,7 +195,7 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 
 	board := generateBaseBoard(cfg.boardType, opts)
 
-	if cfg.mask == "circular" {
+	if cfg.mask != "" && cfg.mask != "none" {
 		minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
 		for _, t := range board.Tiles {
 			for _, p := range t.Points {
@@ -206,8 +206,18 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 			}
 		}
 		cx, cy := (minX+maxX)/2, (minY+maxY)/2
-		radius := math.Min(maxX-minX, maxY-minY) * 0.4
-		board = tilings.ApplyMask(board, tilings.CircularMask(cx, cy, radius))
+
+		switch cfg.mask {
+		case "circular":
+			radius := math.Min(maxX-minX, maxY-minY) * 0.45
+			board = tilings.ApplyMask(board, tilings.CircularMask(cx, cy, radius))
+		case "triangular":
+			radius := math.Min(maxX-minX, maxY-minY) * 0.5
+			board = tilings.ApplyMask(board, tilings.TriangularMask(cx, cy, radius))
+		case "hexagonal":
+			radius := math.Min(maxX-minX, maxY-minY) * 0.45
+			board = tilings.ApplyMask(board, tilings.HexagonalMask(cx, cy, radius))
+		}
 	}
 
 	botNames := strings.Split(cfg.botTypes, ",")
@@ -573,7 +583,7 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 				}
 				baseBoard := generateBaseBoard(cfg.boardType, opts)
 
-				if cfg.mask == "circular" {
+				if cfg.mask != "" && cfg.mask != "none" {
 					minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
 					for _, t := range baseBoard.Tiles {
 						for _, p := range t.Points {
@@ -584,8 +594,18 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 						}
 					}
 					cx, cy := (minX+maxX)/2, (minY+maxY)/2
-					radius := math.Min(maxX-minX, maxY-minY) * 0.4
-					baseBoard = tilings.ApplyMask(baseBoard, tilings.CircularMask(cx, cy, radius))
+
+					switch cfg.mask {
+					case "circular":
+						radius := math.Min(maxX-minX, maxY-minY) * 0.45
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.CircularMask(cx, cy, radius))
+					case "triangular":
+						radius := math.Min(maxX-minX, maxY-minY) * 0.5
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.TriangularMask(cx, cy, radius))
+					case "hexagonal":
+						radius := math.Min(maxX-minX, maxY-minY) * 0.45
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.HexagonalMask(cx, cy, radius))
+					}
 				}
 
 				var startTileIDs []int

@@ -70,3 +70,22 @@ export function rectangularMask(x, y, width, height) {
 export function randomMask(probability) {
     return () => Math.random() < probability;
 }
+
+export function triangularMask(centerX, centerY, radius) {
+    return (x, y) => {
+        const dx = x - centerX;
+        const dy = y - centerY;
+        return dy <= radius / 2 &&
+               dy + Math.sqrt(3) * dx >= -radius &&
+               dy - Math.sqrt(3) * dx >= -radius;
+    };
+}
+
+export function hexagonalMask(centerX, centerY, radius) {
+    return (x, y) => {
+        const dx = x - centerX;
+        const dy = y - centerY;
+        return Math.abs(dx) <= radius * Math.sqrt(3) / 2 &&
+               Math.abs(dy) + Math.abs(dx) / Math.sqrt(3) <= radius;
+    };
+}

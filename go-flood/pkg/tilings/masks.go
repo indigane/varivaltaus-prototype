@@ -77,3 +77,22 @@ func CircularMask(centerX, centerY, radius float64) MaskFn {
 		return math.Sqrt(dx*dx+dy*dy) <= radius
 	}
 }
+
+func TriangularMask(centerX, centerY, radius float64) MaskFn {
+	return func(x, y float64, tile core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		return dy <= radius/2 &&
+			dy+math.Sqrt(3)*dx >= -radius &&
+			dy-math.Sqrt(3)*dx >= -radius
+	}
+}
+
+func HexagonalMask(centerX, centerY, radius float64) MaskFn {
+	return func(x, y float64, tile core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		return math.Abs(dx) <= radius*math.Sqrt(3)/2 &&
+			math.Abs(dy)+math.Abs(dx)/math.Sqrt(3) <= radius
+	}
+}
