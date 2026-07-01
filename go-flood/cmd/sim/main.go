@@ -248,6 +248,31 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 		case "hexagonal":
 			radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
 			board = tilings.ApplyMask(board, tilings.HexagonalMask(cx, cy, radius, rotationRad))
+		case "ellipse-v":
+			ry := (maxY - minY) * 0.45 * adj.scale
+			rx := ry * 0.6
+			board = tilings.ApplyMask(board, tilings.EllipticalMask(cx, cy, rx, ry, rotationRad))
+		case "ellipse-h":
+			rx := (maxX - minX) * 0.45 * adj.scale
+			ry := rx * 0.6
+			board = tilings.ApplyMask(board, tilings.EllipticalMask(cx, cy, rx, ry, rotationRad))
+		case "gemstone":
+			radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+			board = tilings.ApplyMask(board, tilings.GemstoneMask(cx, cy, radius, rotationRad))
+		case "donut":
+			outer := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+			inner := outer * 0.4
+			board = tilings.ApplyMask(board, tilings.DonutMask(cx, cy, inner, outer))
+		case "hourglass-v":
+			radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+			board = tilings.ApplyMask(board, tilings.HourglassMask(cx, cy, radius, rotationRad))
+		case "hourglass-h":
+			radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+			board = tilings.ApplyMask(board, tilings.HourglassMask(cx, cy, radius, rotationRad+math.Pi/2))
+		case "plus":
+			radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+			thick := radius * 0.4
+			board = tilings.ApplyMask(board, tilings.PlusMask(cx, cy, radius, thick, rotationRad))
 		}
 	}
 
@@ -652,6 +677,31 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 					case "hexagonal":
 						radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
 						baseBoard = tilings.ApplyMask(baseBoard, tilings.HexagonalMask(cx, cy, radius, rotationRad))
+					case "ellipse-v":
+						ry := (maxY - minY) * 0.45 * adj.scale
+						rx := ry * 0.6
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.EllipticalMask(cx, cy, rx, ry, rotationRad))
+					case "ellipse-h":
+						rx := (maxX - minX) * 0.45 * adj.scale
+						ry := rx * 0.6
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.EllipticalMask(cx, cy, rx, ry, rotationRad))
+					case "gemstone":
+						radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.GemstoneMask(cx, cy, radius, rotationRad))
+					case "donut":
+						outer := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+						inner := outer * 0.4
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.DonutMask(cx, cy, inner, outer))
+					case "hourglass-v":
+						radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.HourglassMask(cx, cy, radius, rotationRad))
+					case "hourglass-h":
+						radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.HourglassMask(cx, cy, radius, rotationRad+math.Pi/2))
+					case "plus":
+						radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+						thick := radius * 0.4
+						baseBoard = tilings.ApplyMask(baseBoard, tilings.PlusMask(cx, cy, radius, thick, rotationRad))
 					}
 				}
 

@@ -23,7 +23,17 @@ import {
 import { generateOctagonalBoard } from './tilings/octagonal.js';
 import { generatePythagoreanBoard } from './tilings/pythagorean.js';
 import { generateVoronoiBoard } from './tilings/voronoi.js';
-import { applyMask, circularMask, triangularMask, hexagonalMask } from './tilings/masks.js';
+import {
+    applyMask,
+    circularMask,
+    triangularMask,
+    hexagonalMask,
+    ellipticalMask,
+    gemstoneMask,
+    donutMask,
+    hourglassMask,
+    plusMask
+} from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
 import { createGame, applyMove } from './core/game.js';
 import { CanvasRenderer } from './ui/canvas-renderer.js';
@@ -201,6 +211,45 @@ function handleStart() {
         const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, hexagonalMask(cx, cy, radius, rotationRad));
         if (MASK_DEBUG) board.debugMask = { shape: 'hexagonal', cx, cy, radius, rotation: rotationRad };
+    } else if (boardShape === 'ellipse-v') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const ry = board.height * 0.45 * adj.scale;
+        const rx = ry * 0.6;
+        board = applyMask(board, ellipticalMask(cx, cy, rx, ry, rotationRad));
+    } else if (boardShape === 'ellipse-h') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const rx = board.width * 0.45 * adj.scale;
+        const ry = rx * 0.6;
+        board = applyMask(board, ellipticalMask(cx, cy, rx, ry, rotationRad));
+    } else if (boardShape === 'gemstone') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        board = applyMask(board, gemstoneMask(cx, cy, radius, rotationRad));
+    } else if (boardShape === 'donut') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const outer = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        const inner = outer * 0.4;
+        board = applyMask(board, donutMask(cx, cy, inner, outer));
+    } else if (boardShape === 'hourglass-v') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        board = applyMask(board, hourglassMask(cx, cy, radius, rotationRad));
+    } else if (boardShape === 'hourglass-h') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        board = applyMask(board, hourglassMask(cx, cy, radius, rotationRad + Math.PI / 2));
+    } else if (boardShape === 'plus') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        const thick = radius * 0.4;
+        board = applyMask(board, plusMask(cx, cy, radius, thick, rotationRad));
     }
 
     board.startTileIds = findFairStartTileIds(board, configs.length);

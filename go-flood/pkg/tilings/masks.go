@@ -104,3 +104,75 @@ func HexagonalMask(centerX, centerY, radius, rotation float64) MaskFn {
 			math.Abs(rdy)+math.Abs(rdx)/math.Sqrt(3) <= radius
 	}
 }
+
+func EllipticalMask(centerX, centerY, rx, ry, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return (rdx*rdx)/(rx*rx)+(rdy*rdy)/(ry*ry) <= 1
+	}
+}
+
+func GemstoneMask(centerX, centerY, radius, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+
+		nx := rdx / radius
+		ny := rdy / radius
+		absNx := math.Abs(nx)
+
+		if ny > 0.4 || ny < -1.0 {
+			return false
+		}
+		if ny >= 0.1 {
+			return absNx <= (0.7-ny)/0.6
+		}
+		return absNx <= (ny+1.0)/1.1
+	}
+}
+
+func DonutMask(centerX, centerY, innerRadius, outerRadius float64) MaskFn {
+	i2 := innerRadius * innerRadius
+	o2 := outerRadius * outerRadius
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		d2 := dx*dx + dy*dy
+		return d2 >= i2 && d2 <= o2
+	}
+}
+
+func HourglassMask(centerX, centerY, radius, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return math.Abs(rdx) <= math.Abs(rdy) && math.Abs(rdy) <= radius
+	}
+}
+
+func PlusMask(centerX, centerY, radius, thickness, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	halfThick := thickness / 2
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return (math.Abs(rdx) <= radius && math.Abs(rdy) <= halfThick) ||
+			(math.Abs(rdy) <= radius && math.Abs(rdx) <= halfThick)
+	}
+}
