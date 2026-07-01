@@ -10,9 +10,25 @@ func GeneratePythagoreanBoard(options Options) core.Board {
 	a := options.TileSize
 	b := a * 0.5
 
-	tiles := make([]core.Tile, 0, options.Rows*options.Cols*2)
-	largeMap := make(map[string]int)
-	smallMap := make(map[string]int)
+	W := float64(options.Cols) * a
+	H := float64(options.Rows) * a
+	D := a*a + b*b
+
+	iMax := int(math.Ceil((a*W + b*H) / D)) + 2
+	jMin := int(math.Floor(-b * W / D)) - 2
+	jMax := int(math.Ceil(a * H / D)) + 2
+
+	type rawTile struct {
+		ID        int
+		Type      string
+		I, J      int
+		Points    []core.Point
+		Neighbors []*rawTile
+	}
+
+	rawTiles := []*rawTile{}
+	largeMap := make(map[string]*rawTile)
+	smallMap := make(map[string]*rawTile)
 
 	getLargeCenter := func(i, j int) (float64, float64) {
 		return float64(i)*a - float64(j)*b, float64(i)*b + float64(j)*a
@@ -23,123 +39,115 @@ func GeneratePythagoreanBoard(options Options) core.Board {
 		return lcx + (a+b)/2, lcy + (b-a)/2
 	}
 
-	idCounter := 0
-	for j := 0; j < options.Rows; j++ {
-		for i := 0; i < options.Cols; i++ {
+	for j := jMin; j <= jMax; j++ {
+		for i := -2; i <= iMax; i++ {
 			// Large square
 			lcx, lcy := getLargeCenter(i, j)
-			lid := idCounter
-			idCounter++
-			lPoints := []core.Point{
-				{lcx - a/2, lcy - a/2},
-				{lcx + a/2, lcy - a/2},
-				{lcx + a/2, lcy + a/2},
-				{lcx - a/2, lcy + a/2},
+			if lcx >= 0 && lcx <= W && lcy >= 0 && lcy <= H {
+				lPoints := []core.Point{
+					{lcx - a/2, lcy - a/2},
+					{lcx + a/2, lcy - a/2},
+					{lcx + a/2, lcy + a/2},
+					{lcx - a/2, lcy + a/2},
+				}
+				tile := &rawTile{
+					Type:   "large",
+					I:      i,
+					J:      j,
+					Points: lPoints,
+				}
+				rawTiles = append(rawTiles, tile)
+				largeMap[fmt.Sprintf("%d,%d", i, j)] = tile
 			}
-			tiles = append(tiles, core.Tile{
-				ID:      lid,
-				ColorID: int(options.RNG() * float64(options.ColorCount)),
-				Points:  lPoints,
-			})
-			largeMap[fmt.Sprintf("%d,%d", i, j)] = lid
 
 			// Small square
 			scx, scy := getSmallCenter(i, j)
-			sid := idCounter
-			idCounter++
-			sPoints := []core.Point{
-				{scx - b/2, scy - b/2},
-				{scx + b/2, scy - b/2},
-				{scx + b/2, scy + b/2},
-				{scx - b/2, scy + b/2},
+			if scx >= 0 && scx <= W && scy >= 0 && scy <= H {
+				sPoints := []core.Point{
+					{scx - b/2, scy - b/2},
+					{scx + b/2, scy - b/2},
+					{scx + b/2, scy + b/2},
+					{scx - b/2, scy + b/2},
+				}
+				tile := &rawTile{
+					Type:   "small",
+					I:      i,
+					J:      j,
+					Points: sPoints,
+				}
+				rawTiles = append(rawTiles, tile)
+				smallMap[fmt.Sprintf("%d,%d", i, j)] = tile
 			}
-			tiles = append(tiles, core.Tile{
-				ID:      sid,
-				ColorID: int(options.RNG() * float64(options.ColorCount)),
-				Points:  sPoints,
-			})
-			smallMap[fmt.Sprintf("%d,%d", i, j)] = sid
 		}
-	}
-
-	// Reverse maps for efficiency
-	idToCoords := make(map[int]struct {
-		i, j    int
-		isLarge bool
-	})
-	for k, v := range largeMap {
-		var i, j int
-		fmt.Sscanf(k, "%d,%d", &i, &j)
-		idToCoords[v] = struct {
-			i, j    int
-			isLarge bool
-		}{i, j, true}
-	}
-	for k, v := range smallMap {
-		var i, j int
-		fmt.Sscanf(k, "%d,%d", &i, &j)
-		idToCoords[v] = struct {
-			i, j    int
-			isLarge bool
-		}{i, j, false}
 	}
 
 	// Connectivity
-	for idx := range tiles {
-		tile := &tiles[idx]
-		coords := idToCoords[tile.ID]
-		i, j := coords.i, coords.j
-
-		if coords.isLarge {
-			neighbors := []struct {
-				i, j    int
-				isLarge bool
+	for _, tile := range rawTiles {
+		i, j := tile.I, tile.J
+		if tile.Type == "large" {
+			candidates := []struct {
+				m map[string]*rawTile
+				k string
 			}{
-				{i + 1, j, true},
-				{i - 1, j, true},
-				{i, j + 1, true},
-				{i, j - 1, true},
-				{i, j, false},
-				{i, j + 1, false},
-				{i - 1, j + 1, false},
-				{i - 1, j, false},
+				{largeMap, fmt.Sprintf("%d,%d", i+1, j)},
+				{largeMap, fmt.Sprintf("%d,%d", i-1, j)},
+				{largeMap, fmt.Sprintf("%d,%d", i, j+1)},
+				{largeMap, fmt.Sprintf("%d,%d", i, j-1)},
+				{smallMap, fmt.Sprintf("%d,%d", i, j)},
+				{smallMap, fmt.Sprintf("%d,%d", i, j+1)},
+				{smallMap, fmt.Sprintf("%d,%d", i-1, j+1)},
+				{smallMap, fmt.Sprintf("%d,%d", i-1, j)},
 			}
-			for _, n := range neighbors {
-				var nId int
-				var ok bool
-				if n.isLarge {
-					nId, ok = largeMap[fmt.Sprintf("%d,%d", n.i, n.j)]
-				} else {
-					nId, ok = smallMap[fmt.Sprintf("%d,%d", n.i, n.j)]
-				}
-				if ok {
-					tile.Neighbors = append(tile.Neighbors, nId)
+			for _, c := range candidates {
+				if n, ok := c.m[c.k]; ok {
+					tile.Neighbors = append(tile.Neighbors, n)
 				}
 			}
 		} else {
-			neighbors := []struct{ i, j int }{
-				{i, j},
-				{i + 1, j},
-				{i + 1, j - 1},
-				{i, j - 1},
+			candidates := []struct {
+				m map[string]*rawTile
+				k string
+			}{
+				{largeMap, fmt.Sprintf("%d,%d", i, j)},
+				{largeMap, fmt.Sprintf("%d,%d", i+1, j)},
+				{largeMap, fmt.Sprintf("%d,%d", i+1, j-1)},
+				{largeMap, fmt.Sprintf("%d,%d", i, j-1)},
 			}
-			for _, n := range neighbors {
-				if nId, ok := largeMap[fmt.Sprintf("%d,%d", n.i, n.j)]; ok {
-					tile.Neighbors = append(tile.Neighbors, nId)
+			for _, c := range candidates {
+				if n, ok := c.m[c.k]; ok {
+					tile.Neighbors = append(tile.Neighbors, n)
 				}
 			}
 		}
 	}
 
-	// Bounding box and offset
+	// Finalize: Re-index and normalize
+	tiles := make([]core.Tile, len(rawTiles))
+	for idx, rt := range rawTiles {
+		rt.ID = idx
+	}
+
 	minX, minY := math.MaxFloat64, math.MaxFloat64
 	maxX, maxY := -math.MaxFloat64, -math.MaxFloat64
-	for _, t := range tiles {
-		for _, p := range t.Points {
+
+	for idx, rt := range rawTiles {
+		neighborIDs := make([]int, len(rt.Neighbors))
+		for nIdx, n := range rt.Neighbors {
+			neighborIDs[nIdx] = n.ID
+		}
+
+		for _, p := range rt.Points {
 			minX = math.Min(minX, p[0])
 			minY = math.Min(minY, p[1])
 			maxX = math.Max(maxX, p[0])
 			maxY = math.Max(maxY, p[1])
+		}
+
+		tiles[idx] = core.Tile{
+			ID:        idx,
+			ColorID:   int(options.RNG() * float64(options.ColorCount)),
+			Points:    rt.Points,
+			Neighbors: neighborIDs,
 		}
 	}
 
@@ -150,20 +158,54 @@ func GeneratePythagoreanBoard(options Options) core.Board {
 		}
 	}
 
-	startTileIds := []int{}
-	corners := []string{"0,0", fmt.Sprintf("%d,0", options.Cols-1), fmt.Sprintf("0,%d", options.Rows-1), fmt.Sprintf("%d,%d", options.Cols-1, options.Rows-1)}
-	for _, c := range corners {
-		if id, ok := largeMap[c]; ok {
-			startTileIds = append(startTileIds, id)
+	finalW := maxX - minX
+	finalH := maxY - minY
+
+	findClosestLarge := func(tx, ty float64) int {
+		best := -1
+		minDist := math.MaxFloat64
+		for idx, rt := range rawTiles {
+			if rt.Type != "large" {
+				continue
+			}
+			var cx, cy float64
+			for _, p := range rt.Points {
+				cx += p[0]
+				cy += p[1]
+			}
+			cx /= float64(len(rt.Points))
+			cy /= float64(len(rt.Points))
+			d := math.Hypot(cx-tx, cy-ty)
+			if d < minDist {
+				minDist = d
+				best = idx
+			}
+		}
+		return best
+	}
+
+	startTileIds := []int{
+		findClosestLarge(0, 0),
+		findClosestLarge(finalW, 0),
+		findClosestLarge(0, finalH),
+		findClosestLarge(finalW, finalH),
+	}
+	// Deduplicate and filter out -1
+	uniqueStarts := make(map[int]bool)
+	finalStarts := []int{}
+	for _, id := range startTileIds {
+		if id != -1 && !uniqueStarts[id] {
+			uniqueStarts[id] = true
+			finalStarts = append(finalStarts, id)
 		}
 	}
 
 	return core.Board{
 		Version:      1,
 		Generator:    "pythagorean",
-		Width:        maxX - minX,
-		Height:       maxY - minY,
+		Width:        finalW,
+		Height:       finalH,
 		Tiles:        tiles,
-		StartTileIds: startTileIds,
+		StartTileIds: finalStarts,
 	}
 }
