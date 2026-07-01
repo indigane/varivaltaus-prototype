@@ -88,5 +88,29 @@ export function runGameTests() {
         assertEqual(state.players[0].score, 1, "Score should be exactly 1");
     });
 
+    test("Sparse team IDs do not crash scoring", () => {
+        const board = {
+            width: 100, height: 100,
+            startTileIds: [0, 1],
+            tiles: [
+                { id: 0, colorId: 0, ownerId: null, points: [], neighbors: [1] },
+                { id: 1, colorId: 1, ownerId: null, points: [], neighbors: [0] }
+            ]
+        };
+        // Player has teamId: 5, but teams array only has one team with ID 0.
+        // This simulates the bug where teamId in local storage is stale.
+        const players = [
+            { id: 0, name: "P1", teamId: 5, control: "human", alive: true, score: 0 },
+            { id: 1, name: "P2", teamId: 0, control: "human", alive: true, score: 0 }
+        ];
+        const teams = [{ id: 0, name: "T0", playerIds: [1], score: 0 }];
+
+        try {
+            createGame({ board, players, teams, colorCount: 6, paletteId: "default-6", rngSeed: 12345 });
+        } catch (e) {
+            assert(false, `createGame crashed with sparse team IDs: ${e.message}`);
+        }
+    });
+
     console.log("Game Logic Tests Complete.");
 }

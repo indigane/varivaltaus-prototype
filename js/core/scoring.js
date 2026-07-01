@@ -10,8 +10,16 @@ export function computePlayerScores(state) {
 
 export function computeTeamScores(state, playerScores) {
   const scores = Array(state.teams.length).fill(0);
+  const teamIdToIndex = new Map();
+  state.teams.forEach((team, index) => {
+    teamIdToIndex.set(team.id, index);
+  });
+
   for (const player of state.players) {
-    scores[player.teamId] += playerScores[player.id];
+    const teamIndex = teamIdToIndex.get(player.teamId);
+    if (teamIndex !== undefined) {
+      scores[teamIndex] += playerScores[player.id];
+    }
   }
   return scores;
 }

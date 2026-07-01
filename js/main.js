@@ -266,20 +266,23 @@ function handleStart() {
         rows
     });
 
+    const uniqueTeamIds = [...new Set(configs.map(c => c.teamId))].sort((a, b) => a - b);
+    const teamIdMap = new Map();
+    uniqueTeamIds.forEach((id, index) => teamIdMap.set(id, index));
+
     const players = configs.map((c, i) => ({
         id: i,
         name: c.name,
-        teamId: c.teamId,
+        teamId: teamIdMap.get(c.teamId),
         control: c.control,
         alive: true,
         score: 0
     }));
 
-    const teamIds = [...new Set(players.map(p => p.teamId))];
-    const teams = teamIds.map(id => ({
-        id: id,
-        name: `Team ${id}`,
-        playerIds: players.filter(p => p.teamId === id).map(p => p.id),
+    const teams = uniqueTeamIds.map((oldId, newId) => ({
+        id: newId,
+        name: `Team ${String.fromCharCode(65 + newId)}`,
+        playerIds: players.filter(p => p.teamId === newId).map(p => p.id),
         score: 0
     }));
 
