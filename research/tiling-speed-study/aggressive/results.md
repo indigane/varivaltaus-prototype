@@ -3,7 +3,7 @@ Ranking of board tilings by game speed (Turns per 100 tiles). Faster tilings hav
 
 ## Methodology
 - **Games per tiling**: 1000
-- **Grid Size**: 20x20 base
+- **Grid Size**: 20x20 base (actual tile count varies by geometry)
 - **Colors**: 6
 - **Bots**: 2x Aggressive
 
@@ -21,14 +21,15 @@ Ranking of board tilings by game speed (Turns per 100 tiles). Faster tilings hav
 | 8 | snub-square | 2521 | 144.99 | **5.75** | 10.85 | 43.0% | 15.2% |
 | 9 | voronoi-random | 400 | 22.99 | **5.75** | 3.85 | 35.0% | 23.4% |
 | 10 | kisrhombille | 4800 | 278.95 | **5.81** | 15.39 | 44.3% | 12.1% |
-| 11 | trihexagonal | 1198 | 72.53 | **6.05** | 8.75 | 45.1% | 15.9% |
-| 12 | pentagon-cairo | 800 | 55.38 | **6.92** | 7.24 | 44.3% | 14.0% |
-| 13 | voronoi-jittered | 400 | 32.10 | **8.03** | 5.51 | 44.0% | 17.6% |
-| 14 | rhombille | 1121 | 91.83 | **8.19** | 9.12 | 46.7% | 14.1% |
-| 15 | pentagon-prismatic | 722 | 59.81 | **8.28** | 6.10 | 36.5% | 26.2% |
-| 16 | hex | 400 | 34.11 | **8.53** | 5.76 | 45.6% | 16.8% |
-| 17 | triakis-triangular | 2400 | 223.82 | **9.33** | 13.65 | 45.9% | 10.9% |
-| 18 | elongated-triangular | 1160 | 108.41 | **9.35** | 7.49 | 37.9% | 27.0% |
-| 19 | tetrakis-square | 1600 | 150.33 | **9.40** | 10.72 | 43.6% | 13.6% |
-| 20 | square | 400 | 46.14 | **11.54** | 6.12 | 43.3% | 14.7% |
-| 21 | triangle | 400 | 63.76 | **15.94** | 6.26 | 46.4% | 13.0% |
+| 11 | pythagorean | 657 | 39.08 | **5.95** | 6.07 | 42.5% | 19.9% |
+| 12 | trihexagonal | 1198 | 72.53 | **6.05** | 8.75 | 45.1% | 15.9% |
+| 13 | pentagon-cairo | 800 | 55.38 | **6.92** | 7.24 | 44.3% | 14.0% |
+| 14 | voronoi-jittered | 400 | 32.10 | **8.03** | 5.51 | 44.0% | 17.6% |
+| 15 | rhombille | 1121 | 91.83 | **8.19** | 9.12 | 46.7% | 14.1% |
+| 16 | pentagon-prismatic | 722 | 59.81 | **8.28** | 6.10 | 36.5% | 26.2% |
+| 17 | hex | 400 | 34.11 | **8.53** | 5.76 | 45.6% | 16.8% |
+| 18 | triakis-triangular | 2400 | 223.82 | **9.33** | 13.65 | 45.9% | 10.9% |
+| 19 | elongated-triangular | 1160 | 108.41 | **9.35** | 7.49 | 37.9% | 27.0% |
+| 20 | tetrakis-square | 1600 | 150.33 | **9.40** | 10.72 | 43.6% | 13.6% |
+| 21 | square | 400 | 46.14 | **11.54** | 6.12 | 43.3% | 14.7% |
+| 22 | triangle | 400 | 63.76 | **15.94** | 6.26 | 46.4% | 13.0% |

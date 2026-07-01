@@ -8,7 +8,7 @@ TILINGS=(
     "snub-square" "snub-trihexagonal" "elongated-triangular" "pentagon-cairo"
     "pentagon-prismatic" "pentagon-floret" "deltoidal-trihexagonal" "rhombille"
     "triakis-triangular" "kisrhombille" "tetrakis-square" "rhombitrihexagonal"
-    "4.8.8" "voronoi-jittered" "voronoi-random"
+    "4.8.8" "voronoi-jittered" "voronoi-random" "pythagorean"
 )
 
 GAMES=1000

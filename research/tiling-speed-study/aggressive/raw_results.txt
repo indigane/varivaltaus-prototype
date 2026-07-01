@@ -355,3 +355,19 @@ Results:
   Player 1 (aggressive): 414 (41.4%)
   Draw: 5 (0.5%)
 ----------------------------------------------------------------
+TILING: pythagorean
+Starting simulation of 1000 games on 20x20 pythagorean board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 6.834360167s (146.32 games/sec)
+Total tiles: 657
+Average turns: 39.08
+Turns per 100 tiles: 5.95
+Average winner dominance: 51.9%
+Average lead changes: 6.07
+Average Point of No Return: 42.5%
+Average Max Lead of Winner: 19.9%
+Results:
+  Player 0 (aggressive): 556 (55.6%)
+  Player 1 (aggressive): 444 (44.4%)
+----------------------------------------------------------------
