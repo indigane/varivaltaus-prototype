@@ -611,7 +611,7 @@ export class CanvasRenderer {
 
     drawDebugMask(debugMask) {
         const { ctx, scale, offsetX, offsetY } = this;
-        const { shape, cx, cy, radius, rotation = 0 } = debugMask;
+        const { shape, cx, cy, radius, rotation = 0, rx, ry, inner, outer, thick } = debugMask;
 
         ctx.save();
         ctx.strokeStyle = 'red';
@@ -638,6 +638,36 @@ export class CanvasRenderer {
                 if (i === 0) ctx.moveTo(px, py);
                 else ctx.lineTo(px, py);
             }
+            ctx.closePath();
+        } else if (shape === 'elliptical') {
+            ctx.ellipse(0, 0, rx * scale, ry * scale, 0, 0, Math.PI * 2);
+        } else if (shape === 'gemstone') {
+            ctx.moveTo(0, sr);
+            ctx.lineTo(0.9 * sr, 0.1 * sr);
+            ctx.lineTo(0.4 * sr, -0.4 * sr);
+            ctx.lineTo(-0.4 * sr, -0.4 * sr);
+            ctx.lineTo(-0.9 * sr, 0.1 * sr);
+            ctx.closePath();
+        } else if (shape === 'donut') {
+            ctx.arc(0, 0, outer * scale, 0, Math.PI * 2);
+            ctx.moveTo(inner * scale, 0);
+            ctx.arc(0, 0, inner * scale, 0, Math.PI * 2, true);
+        } else if (shape === 'hourglass') {
+            const waist = sr * 0.25;
+            const shoulder = sr * 0.75 + waist;
+            ctx.moveTo(-waist, 0);
+            ctx.lineTo(-shoulder, sr);
+            ctx.lineTo(shoulder, sr);
+            ctx.lineTo(waist, 0);
+            ctx.lineTo(shoulder, -sr);
+            ctx.lineTo(-shoulder, -sr);
+            ctx.closePath();
+        } else if (shape === 'plus') {
+            const h = (thick * scale) / 2;
+            ctx.moveTo(-sr, -h); ctx.lineTo(-h, -h); ctx.lineTo(-h, -sr);
+            ctx.lineTo(h, -sr); ctx.lineTo(h, -h); ctx.lineTo(sr, -h);
+            ctx.lineTo(sr, h); ctx.lineTo(h, h); ctx.lineTo(h, sr);
+            ctx.lineTo(-h, sr); ctx.lineTo(-h, h); ctx.lineTo(-sr, h);
             ctx.closePath();
         }
 

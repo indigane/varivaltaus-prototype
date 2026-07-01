@@ -119,30 +119,17 @@ export function gemstoneMask(centerX, centerY, radius, rotation = 0) {
         const rdx = dx * cos - dy * sin;
         const rdy = dx * sin + dy * cos;
 
-        // Normalize coordinates to radius
         const nx = rdx / radius;
         const ny = rdy / radius;
-        const absNx = Math.abs(nx);
 
-        // Classic diamond shape: flat top, slanted shoulders, pointy bottom
-        // Top: ny = 0.4
-        // Shoulders: (0.5, 0.4) to (1.0, 0.1)
-        // Bottom: (1.0, 0.1) to (0, -1.0)
-
-        if (ny > 0.4 || ny < -1.0) return false;
-        if (ny >= 0.1) {
-            // Top part (trapezoid)
-            // shoulder line: ny - 0.4 = (0.1 - 0.4)/(1.0 - 0.5) * (absNx - 0.5)
-            // ny - 0.4 = -0.3 / 0.5 * (absNx - 0.5) = -0.6 * (absNx - 0.5)
-            // ny = -0.6 * absNx + 0.3 + 0.4 = -0.6 * absNx + 0.7
-            return absNx <= (0.7 - ny) / 0.6;
-        } else {
-            // Bottom part (triangle)
-            // line: ny - (-1.0) = (0.1 - (-1.0))/(1.0 - 0) * (absNx - 0)
-            // ny + 1.0 = 1.1 * absNx
-            // absNx <= (ny + 1.0) / 1.1
-            return absNx <= (ny + 1.0) / 1.1;
-        }
+        // Pentagon from image: 3 right angles, 2 135-deg angles.
+        // Standing on the clipped "pointy" edge.
+        // Peak at (0, 1). Bottom flat edge at y = -0.4.
+        return ny >= -0.4 &&
+               ny - nx <= 1.0 &&
+               ny + nx <= 1.0 &&
+               ny - nx >= -0.8 &&
+               ny + nx >= -0.8;
     };
 }
 
@@ -160,12 +147,13 @@ export function donutMask(centerX, centerY, innerRadius, outerRadius) {
 export function hourglassMask(centerX, centerY, radius, rotation = 0) {
     const cos = Math.cos(-rotation);
     const sin = Math.sin(-rotation);
+    const waist = radius * 0.25;
     return (x, y) => {
         const dx = x - centerX;
         const dy = y - centerY;
         const rdx = dx * cos - dy * sin;
         const rdy = dx * sin + dy * cos;
-        return Math.abs(rdx) <= Math.abs(rdy) && Math.abs(rdy) <= radius;
+        return Math.abs(rdx) <= Math.abs(rdy) * 0.75 + waist && Math.abs(rdy) <= radius;
     };
 }
 

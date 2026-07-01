@@ -128,15 +128,14 @@ func GemstoneMask(centerX, centerY, radius, rotation float64) MaskFn {
 
 		nx := rdx / radius
 		ny := rdy / radius
-		absNx := math.Abs(nx)
 
-		if ny > 0.4 || ny < -1.0 {
-			return false
-		}
-		if ny >= 0.1 {
-			return absNx <= (0.7-ny)/0.6
-		}
-		return absNx <= (ny+1.0)/1.1
+		// Pentagon from image: 3 right angles, 2 135-deg angles.
+		// Standing on the clipped "pointy" edge.
+		return ny >= -0.4 &&
+			ny-nx <= 1.0 &&
+			ny+nx <= 1.0 &&
+			ny-nx >= -0.8 &&
+			ny+nx >= -0.8
 	}
 }
 
@@ -154,12 +153,13 @@ func DonutMask(centerX, centerY, innerRadius, outerRadius float64) MaskFn {
 func HourglassMask(centerX, centerY, radius, rotation float64) MaskFn {
 	cos := math.Cos(-rotation)
 	sin := math.Sin(-rotation)
+	waist := radius * 0.25
 	return func(x, y float64, t core.Tile) bool {
 		dx := x - centerX
 		dy := y - centerY
 		rdx := dx*cos - dy*sin
 		rdy := dx*sin + dy*cos
-		return math.Abs(rdx) <= math.Abs(rdy) && math.Abs(rdy) <= radius
+		return math.Abs(rdx) <= math.Abs(rdy)*0.75+waist && math.Abs(rdy) <= radius
 	}
 }
 

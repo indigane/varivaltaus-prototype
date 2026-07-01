@@ -217,39 +217,46 @@ function handleStart() {
         const ry = board.height * 0.45 * adj.scale;
         const rx = ry * 0.6;
         board = applyMask(board, ellipticalMask(cx, cy, rx, ry, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'elliptical', cx, cy, rx, ry, rotation: rotationRad };
     } else if (boardShape === 'ellipse-h') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const rx = board.width * 0.45 * adj.scale;
         const ry = rx * 0.6;
         board = applyMask(board, ellipticalMask(cx, cy, rx, ry, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'elliptical', cx, cy, rx, ry, rotation: rotationRad };
     } else if (boardShape === 'gemstone') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, gemstoneMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'gemstone', cx, cy, radius, rotation: rotationRad };
     } else if (boardShape === 'donut') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const outer = Math.min(board.width, board.height) * 0.45 * adj.scale;
         const inner = outer * 0.4;
         board = applyMask(board, donutMask(cx, cy, inner, outer));
+        if (MASK_DEBUG) board.debugMask = { shape: 'donut', cx, cy, inner, outer, rotation: rotationRad };
     } else if (boardShape === 'hourglass-v') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, hourglassMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'hourglass', cx, cy, radius, rotation: rotationRad };
     } else if (boardShape === 'hourglass-h') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, hourglassMask(cx, cy, radius, rotationRad + Math.PI / 2));
+        if (MASK_DEBUG) board.debugMask = { shape: 'hourglass', cx, cy, radius, rotation: rotationRad + Math.PI / 2 };
     } else if (boardShape === 'plus') {
         const cx = board.width / 2 + adj.dx;
         const cy = board.height / 2 + adj.dy;
         const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
-        const thick = radius * 0.4;
+        const thick = radius * 0.5;
         board = applyMask(board, plusMask(cx, cy, radius, thick, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'plus', cx, cy, radius, thick, rotation: rotationRad };
     }
 
     board.startTileIds = findFairStartTileIds(board, configs.length);
