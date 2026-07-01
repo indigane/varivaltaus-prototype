@@ -20,6 +20,7 @@ import {
     generateTriakisTriangularBoard
 } from './tilings/dual-semi-regular.js';
 import { generateOctagonalBoard } from './tilings/octagonal.js';
+import { generatePythagoreanBoard } from './tilings/pythagorean.js';
 import { generateVoronoiBoard } from './tilings/voronoi.js';
 import { applyMask, circularMask } from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
@@ -145,6 +146,8 @@ function handleStart() {
         board = generateTetrakisSquareBoard({ ...commonOptions, cols, rows, tileSize });
     } else if (boardType === '4.8.8') {
         board = generateOctagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
+    } else if (boardType === 'pythagorean') {
+        board = generatePythagoreanBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.8 });
     } else if (boardType === 'voronoi-jittered') {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'jittered' });
     } else if (boardType === 'voronoi-random') {

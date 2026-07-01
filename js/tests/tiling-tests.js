@@ -5,6 +5,7 @@ import { generateHexBoard } from '../tilings/hex.js';
 import { generateRhombitrihexagonalBoard } from '../tilings/rhombitrihexagonal.js';
 import { generateCairoPentagonBoard } from '../tilings/pentagon.js';
 import { generateOctagonalBoard } from '../tilings/octagonal.js';
+import { generatePythagoreanBoard } from '../tilings/pythagorean.js';
 import { generateTrihexagonalBoard } from '../tilings/trihexagonal.js';
 import { generateTruncatedHexagonalBoard } from '../tilings/truncated-hexagonal.js';
 import { generateTruncatedTrihexagonalBoard } from '../tilings/truncated-trihexagonal.js';
@@ -35,6 +36,7 @@ export function runTilingTests() {
     testGenerator("Hex Hex", () => generateHexBoard({ ...options, shape: "hexagonal" }));
     testGenerator("Rhombitrihexagonal", () => generateRhombitrihexagonalBoard(options), { sides: [3, 4, 6], edgeLength: options.tileSize });
     testGenerator("Pentagon Cairo", () => generateCairoPentagonBoard(options));
+    testGenerator("Pythagorean", () => generatePythagoreanBoard(options));
     testGenerator("Octagonal (4.8.8)", () => generateOctagonalBoard(options), { sides: [4, 8], edgeLength: options.tileSize });
     testGenerator("Trihexagonal (3.6.3.6)", () => generateTrihexagonalBoard(options), { sides: [3, 6], edgeLength: options.tileSize });
     testGenerator("Truncated Hexagonal (3.12.12)", () => generateTruncatedHexagonalBoard(options), { sides: [3, 12], edgeLength: options.tileSize });

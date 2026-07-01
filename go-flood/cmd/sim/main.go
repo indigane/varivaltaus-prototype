@@ -17,7 +17,7 @@ import (
 func main() {
 	mode := flag.String("mode", "sim", "Mode: sim, fairness, or search")
 	gameCount := flag.Int("games", 100, "Number of games (or batches) to simulate")
-	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, rhombitrihexagonal, pentagon-cairo, pentagon-prismatic, pentagon-floret, deltoidal-trihexagonal, rhombille, triakis-triangular, kisrhombille, tetrakis-square, voronoi-jittered, voronoi-random)")
+	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, rhombitrihexagonal, pythagorean, pentagon-cairo, pentagon-prismatic, pentagon-floret, deltoidal-trihexagonal, rhombille, triakis-triangular, kisrhombille, tetrakis-square, voronoi-jittered, voronoi-random)")
 	colsFlag := flag.Int("cols", 20, "Number of columns")
 	rowsFlag := flag.Int("rows", 20, "Number of rows")
 	colorCountFlag := flag.Int("colors", 6, "Number of colors")
@@ -668,6 +668,8 @@ func generateBaseBoard(boardType string, opts tilings.Options) core.Board {
 		return tilings.GenerateTetrakisSquareBoard(opts)
 	case "rhombitrihexagonal":
 		return tilings.GenerateRhombitrihexagonalBoard(opts)
+	case "pythagorean":
+		return tilings.GeneratePythagoreanBoard(opts)
 	case "4.8.8":
 		return tilings.GenerateOctagonalBoard(opts)
 	case "voronoi-jittered":

@@ -109,6 +109,12 @@ func TestGenerators(t *testing.T) {
 	board = GenerateTetrakisSquareBoard(opts)
 	assertDualBoard(t, "tetrakis square", board, 3)
 
+	board = GeneratePythagoreanBoard(opts)
+	if len(board.Tiles) == 0 {
+		t.Errorf("Expected some tiles for pythagorean board")
+	}
+	assertNeighborGraph(t, "pythagorean", board)
+
 	board = GenerateVoronoiBoard(opts, "jittered")
 	if len(board.Tiles) != 100 {
 		t.Errorf("Expected 100 tiles for voronoi board, got %d", len(board.Tiles))
