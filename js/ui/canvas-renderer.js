@@ -39,6 +39,10 @@ export class CanvasRenderer {
             const boundaryEdges = this._collectBoundaryEdges(edgeMap);
             this.drawFlatBoundaries(boundaryEdges);
         }
+
+        if (board.debugMask) {
+            this.drawDebugMask(board.debugMask);
+        }
     }
 
     clear() {
@@ -601,5 +605,73 @@ export class CanvasRenderer {
 
     _pointKey(p) {
         return `${p[0].toFixed(2)},${p[1].toFixed(2)}`;
+    }
+
+    // ─── Debug Rendering ─────────────────────────────────────
+
+    drawDebugMask(debugMask) {
+        const { ctx, scale, offsetX, offsetY } = this;
+        const { shape, cx, cy, radius, rotation = 0, rx, ry, inner, outer, thick } = debugMask;
+
+        ctx.save();
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.translate(cx * scale + offsetX, cy * scale + offsetY);
+        ctx.rotate(rotation);
+        ctx.beginPath();
+
+        const sr = radius * scale;
+
+        if (shape === 'circular') {
+            ctx.arc(0, 0, sr, 0, Math.PI * 2);
+        } else if (shape === 'triangular') {
+            ctx.moveTo(0, -sr);
+            ctx.lineTo(sr * Math.sqrt(3) / 2, sr / 2);
+            ctx.lineTo(-sr * Math.sqrt(3) / 2, sr / 2);
+            ctx.closePath();
+        } else if (shape === 'hexagonal') {
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 180) * (60 * i - 30);
+                const px = sr * Math.cos(angle);
+                const py = sr * Math.sin(angle);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+        } else if (shape === 'elliptical') {
+            ctx.ellipse(0, 0, rx * scale, ry * scale, 0, 0, Math.PI * 2);
+        } else if (shape === 'gemstone') {
+            ctx.moveTo(0, sr);
+            ctx.lineTo(0.9 * sr, 0.1 * sr);
+            ctx.lineTo(0.4 * sr, -0.4 * sr);
+            ctx.lineTo(-0.4 * sr, -0.4 * sr);
+            ctx.lineTo(-0.9 * sr, 0.1 * sr);
+            ctx.closePath();
+        } else if (shape === 'donut') {
+            ctx.arc(0, 0, outer * scale, 0, Math.PI * 2);
+            ctx.moveTo(inner * scale, 0);
+            ctx.arc(0, 0, inner * scale, 0, Math.PI * 2, true);
+        } else if (shape === 'hourglass') {
+            const waist = sr * 0.25;
+            const shoulder = sr * 0.75 + waist;
+            ctx.moveTo(-waist, 0);
+            ctx.lineTo(-shoulder, sr);
+            ctx.lineTo(shoulder, sr);
+            ctx.lineTo(waist, 0);
+            ctx.lineTo(shoulder, -sr);
+            ctx.lineTo(-shoulder, -sr);
+            ctx.closePath();
+        } else if (shape === 'plus') {
+            const h = (thick * scale) / 2;
+            ctx.moveTo(-sr, -h); ctx.lineTo(-h, -h); ctx.lineTo(-h, -sr);
+            ctx.lineTo(h, -sr); ctx.lineTo(h, -h); ctx.lineTo(sr, -h);
+            ctx.lineTo(sr, h); ctx.lineTo(h, h); ctx.lineTo(h, sr);
+            ctx.lineTo(-h, sr); ctx.lineTo(-h, h); ctx.lineTo(-sr, h);
+            ctx.closePath();
+        }
+
+        ctx.stroke();
+        ctx.restore();
     }
 }

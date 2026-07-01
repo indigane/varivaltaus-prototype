@@ -77,3 +77,102 @@ func CircularMask(centerX, centerY, radius float64) MaskFn {
 		return math.Sqrt(dx*dx+dy*dy) <= radius
 	}
 }
+
+func TriangularMask(centerX, centerY, radius, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	return func(x, y float64, tile core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return rdy <= radius/2 &&
+			rdy+math.Sqrt(3)*rdx >= -radius &&
+			rdy-math.Sqrt(3)*rdx >= -radius
+	}
+}
+
+func HexagonalMask(centerX, centerY, radius, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	return func(x, y float64, tile core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return math.Abs(rdx) <= radius*math.Sqrt(3)/2 &&
+			math.Abs(rdy)+math.Abs(rdx)/math.Sqrt(3) <= radius
+	}
+}
+
+func EllipticalMask(centerX, centerY, rx, ry, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return (rdx*rdx)/(rx*rx)+(rdy*rdy)/(ry*ry) <= 1
+	}
+}
+
+func GemstoneMask(centerX, centerY, radius, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+
+		nx := rdx / radius
+		ny := rdy / radius
+
+		// Pentagon from image: 3 right angles, 2 135-deg angles.
+		// Standing on the clipped "pointy" edge.
+		return ny >= -0.4 &&
+			ny-nx <= 1.0 &&
+			ny+nx <= 1.0 &&
+			ny-nx >= -0.8 &&
+			ny+nx >= -0.8
+	}
+}
+
+func DonutMask(centerX, centerY, innerRadius, outerRadius float64) MaskFn {
+	i2 := innerRadius * innerRadius
+	o2 := outerRadius * outerRadius
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		d2 := dx*dx + dy*dy
+		return d2 >= i2 && d2 <= o2
+	}
+}
+
+func HourglassMask(centerX, centerY, radius, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	waist := radius * 0.25
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return math.Abs(rdx) <= math.Abs(rdy)*0.75+waist && math.Abs(rdy) <= radius
+	}
+}
+
+func PlusMask(centerX, centerY, radius, thickness, rotation float64) MaskFn {
+	cos := math.Cos(-rotation)
+	sin := math.Sin(-rotation)
+	halfThick := thickness / 2
+	return func(x, y float64, t core.Tile) bool {
+		dx := x - centerX
+		dy := y - centerY
+		rdx := dx*cos - dy*sin
+		rdy := dx*sin + dy*cos
+		return (math.Abs(rdx) <= radius && math.Abs(rdy) <= halfThick) ||
+			(math.Abs(rdy) <= radius && math.Abs(rdx) <= halfThick)
+	}
+}

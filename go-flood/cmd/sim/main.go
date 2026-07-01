@@ -33,7 +33,7 @@ func main() {
 	startAreaSizeFlag := flag.Int("start-area-size", 1, "Starting area size")
 	startAreaBufferFlag := flag.Bool("start-area-buffer", true, "Whether to apply starting area buffer")
 	turnOrderFlag := flag.String("turn-order", "players", "Turn order: players or snake")
-	maskFlag := flag.String("mask", "", "Mask: none or circular")
+	maskFlag := flag.String("mask", "", "Mask: none, circular, triangular, hexagonal, ellipse-v, ellipse-h, gemstone, donut, hourglass-v, hourglass-h, plus")
 
 	flag.Parse()
 
@@ -173,6 +173,21 @@ func runSimulation(gameCount int, cfg studyConfig) {
 	}
 }
 
+type maskAdjustment struct {
+	dx       float64
+	dy       float64
+	scale    float64
+	rotation float64
+	BySize   map[int]maskAdjustment
+}
+
+var maskAdjustments = map[string]map[string]maskAdjustment{
+// Example:
+// "triakis-triangular": {
+//     "triangular": {dy: 0, scale: 1.0, rotation: 0},
+// },
+}
+
 type gameResult struct {
 	winner           int
 	winningTeam      int
@@ -182,6 +197,85 @@ type gameResult struct {
 	leadChanges      int
 	pointOfNoReturn  int
 	maxLead          float64
+}
+
+func applyConfigMask(board core.Board, boardType string, maskType string, size int) core.Board {
+	if maskType == "" || maskType == "none" {
+		return board
+	}
+
+	minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
+	for _, t := range board.Tiles {
+		for _, p := range t.Points {
+			if p[0] < minX {
+				minX = p[0]
+			}
+			if p[0] > maxX {
+				maxX = p[0]
+			}
+			if p[1] < minY {
+				minY = p[1]
+			}
+			if p[1] > maxY {
+				maxY = p[1]
+			}
+		}
+	}
+	cx, cy := (minX+maxX)/2, (minY+maxY)/2
+
+	adj := maskAdjustment{scale: 1.0}
+	if m, ok := maskAdjustments[boardType]; ok {
+		if a, ok := m[maskType]; ok {
+			adj = a
+			if a.BySize != nil {
+				if sa, ok := a.BySize[size]; ok {
+					adj = sa
+				}
+			}
+		}
+	}
+
+	cx += adj.dx
+	cy += adj.dy
+	rotationRad := adj.rotation * math.Pi / 180
+
+	switch maskType {
+	case "circular":
+		radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+		return tilings.ApplyMask(board, tilings.CircularMask(cx, cy, radius))
+	case "triangular":
+		radius := math.Min(maxX-minX, maxY-minY) * 0.5 * adj.scale
+		return tilings.ApplyMask(board, tilings.TriangularMask(cx, cy+radius/4, radius, rotationRad))
+	case "hexagonal":
+		radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+		return tilings.ApplyMask(board, tilings.HexagonalMask(cx, cy, radius, rotationRad))
+	case "ellipse-v":
+		ry := (maxY - minY) * 0.45 * adj.scale
+		rx := ry * 0.6
+		return tilings.ApplyMask(board, tilings.EllipticalMask(cx, cy, rx, ry, rotationRad))
+	case "ellipse-h":
+		rx := (maxX - minX) * 0.45 * adj.scale
+		ry := rx * 0.6
+		return tilings.ApplyMask(board, tilings.EllipticalMask(cx, cy, rx, ry, rotationRad))
+	case "gemstone":
+		radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+		return tilings.ApplyMask(board, tilings.GemstoneMask(cx, cy, radius, rotationRad))
+	case "donut":
+		outer := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+		inner := outer * 0.4
+		return tilings.ApplyMask(board, tilings.DonutMask(cx, cy, inner, outer))
+	case "hourglass-v":
+		radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+		return tilings.ApplyMask(board, tilings.HourglassMask(cx, cy, radius, rotationRad))
+	case "hourglass-h":
+		radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+		return tilings.ApplyMask(board, tilings.HourglassMask(cx, cy, radius, rotationRad+math.Pi/2))
+	case "plus":
+		radius := math.Min(maxX-minX, maxY-minY) * 0.45 * adj.scale
+		thick := radius * 0.5
+		return tilings.ApplyMask(board, tilings.PlusMask(cx, cy, radius, thick, rotationRad))
+	}
+	return board
 }
 
 func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) gameResult {
@@ -194,21 +288,7 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 	}
 
 	board := generateBaseBoard(cfg.boardType, opts)
-
-	if cfg.mask == "circular" {
-		minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
-		for _, t := range board.Tiles {
-			for _, p := range t.Points {
-				if p[0] < minX { minX = p[0] }
-				if p[0] > maxX { maxX = p[0] }
-				if p[1] < minY { minY = p[1] }
-				if p[1] > maxY { maxY = p[1] }
-			}
-		}
-		cx, cy := (minX+maxX)/2, (minY+maxY)/2
-		radius := math.Min(maxX-minX, maxY-minY) * 0.4
-		board = tilings.ApplyMask(board, tilings.CircularMask(cx, cy, radius))
-	}
+	board = applyConfigMask(board, cfg.boardType, cfg.mask, cfg.cols)
 
 	botNames := strings.Split(cfg.botTypes, ",")
 	playerCount := len(botNames)
@@ -572,21 +652,7 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 					RNG:        workerRNG,
 				}
 				baseBoard := generateBaseBoard(cfg.boardType, opts)
-
-				if cfg.mask == "circular" {
-					minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
-					for _, t := range baseBoard.Tiles {
-						for _, p := range t.Points {
-							if p[0] < minX { minX = p[0] }
-							if p[0] > maxX { maxX = p[0] }
-							if p[1] < minY { minY = p[1] }
-							if p[1] > maxY { maxY = p[1] }
-						}
-					}
-					cx, cy := (minX+maxX)/2, (minY+maxY)/2
-					radius := math.Min(maxX-minX, maxY-minY) * 0.4
-					baseBoard = tilings.ApplyMask(baseBoard, tilings.CircularMask(cx, cy, radius))
-				}
+				baseBoard = applyConfigMask(baseBoard, cfg.boardType, cfg.mask, cfg.cols)
 
 				var startTileIDs []int
 				if len(fixedStartTiles) > 0 {

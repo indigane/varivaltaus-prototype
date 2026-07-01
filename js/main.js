@@ -23,7 +23,17 @@ import {
 import { generateOctagonalBoard } from './tilings/octagonal.js';
 import { generatePythagoreanBoard } from './tilings/pythagorean.js';
 import { generateVoronoiBoard } from './tilings/voronoi.js';
-import { applyMask, circularMask } from './tilings/masks.js';
+import {
+    applyMask,
+    circularMask,
+    triangularMask,
+    hexagonalMask,
+    ellipticalMask,
+    gemstoneMask,
+    donutMask,
+    hourglassMask,
+    plusMask
+} from './tilings/masks.js';
 import { findFairStartTileIds } from './core/fair-starts.js';
 import { createGame, applyMove } from './core/game.js';
 import { CanvasRenderer } from './ui/canvas-renderer.js';
@@ -50,6 +60,21 @@ const BOTS = {
     hybrid: getHybridMove,
     spite: getSpiteMove
 };
+
+/**
+ * Manual fine-tuning for specific tiling and shape combinations.
+ * dx, dy are in pixels (applied after initial centering).
+ * scale is a multiplier for the mask's radius.
+ * rotation is in degrees (clockwise).
+ */
+const MASK_ADJUSTMENTS = {
+    // Example:
+    // 'triakis-triangular': {
+    //     'triangular': { dx: 0, dy: 0, scale: 1.0, rotation: 30 }
+    // }
+};
+
+const MASK_DEBUG = false;
 
 function init() {
     renderer = new CanvasRenderer('game-canvas');
@@ -89,8 +114,13 @@ function handleStart() {
 
     const boardType = document.getElementById('board-type').value;
     const boardShape = document.getElementById('board-shape').value;
-    const cols = parseInt(document.getElementById('board-cols').value);
-    const rows = parseInt(document.getElementById('board-rows').value);
+    let cols = parseInt(document.getElementById('board-cols').value);
+    let rows = parseInt(document.getElementById('board-rows').value);
+    if (boardShape !== 'rectangular') {
+        const size = parseInt(document.getElementById('board-size').value);
+        cols = size;
+        rows = size;
+    }
     const tileSize = 25;
     const colorCount = parseInt(document.getElementById('color-count').value);
     const colorRestrictions = document.getElementById('color-restrictions').value;
@@ -157,11 +187,76 @@ function handleStart() {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'random' });
     }
 
+    const adjLookup = (MASK_ADJUSTMENTS[boardType] && MASK_ADJUSTMENTS[boardType][boardShape]) || { dx: 0, dy: 0, scale: 1.0, rotation: 0 };
+    // Support size-specific adjustments: if adjLookup[cols] exists, use it
+    const adj = adjLookup[cols] || adjLookup;
+    const rotationRad = (adj.rotation || 0) * Math.PI / 180;
+
     if (boardShape === 'circular') {
-        const cx = board.width / 2;
-        const cy = board.height / 2;
-        const radius = Math.min(board.width, board.height) * 0.4;
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
         board = applyMask(board, circularMask(cx, cy, radius));
+        if (MASK_DEBUG) board.debugMask = { shape: 'circular', cx, cy, radius, rotation: rotationRad };
+    } else if (boardShape === 'triangular' && boardType !== 'triangle') {
+        // Shift centerY so mask is centered vertically based on its bounding box
+        const cx = board.width / 2 + adj.dx;
+        const radius = Math.min(board.width, board.height) * 0.5 * adj.scale;
+        const cy = board.height / 2 + radius / 4 + adj.dy;
+        board = applyMask(board, triangularMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'triangular', cx, cy, radius, rotation: rotationRad };
+    } else if (boardShape === 'hexagonal' && boardType !== 'hex') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        board = applyMask(board, hexagonalMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'hexagonal', cx, cy, radius, rotation: rotationRad };
+    } else if (boardShape === 'ellipse-v') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const ry = board.height * 0.45 * adj.scale;
+        const rx = ry * 0.6;
+        board = applyMask(board, ellipticalMask(cx, cy, rx, ry, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'elliptical', cx, cy, rx, ry, rotation: rotationRad };
+    } else if (boardShape === 'ellipse-h') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const rx = board.width * 0.45 * adj.scale;
+        const ry = rx * 0.6;
+        board = applyMask(board, ellipticalMask(cx, cy, rx, ry, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'elliptical', cx, cy, rx, ry, rotation: rotationRad };
+    } else if (boardShape === 'gemstone') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        board = applyMask(board, gemstoneMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'gemstone', cx, cy, radius, rotation: rotationRad };
+    } else if (boardShape === 'donut') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const outer = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        const inner = outer * 0.4;
+        board = applyMask(board, donutMask(cx, cy, inner, outer));
+        if (MASK_DEBUG) board.debugMask = { shape: 'donut', cx, cy, inner, outer, rotation: rotationRad };
+    } else if (boardShape === 'hourglass-v') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        board = applyMask(board, hourglassMask(cx, cy, radius, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'hourglass', cx, cy, radius, rotation: rotationRad };
+    } else if (boardShape === 'hourglass-h') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        board = applyMask(board, hourglassMask(cx, cy, radius, rotationRad + Math.PI / 2));
+        if (MASK_DEBUG) board.debugMask = { shape: 'hourglass', cx, cy, radius, rotation: rotationRad + Math.PI / 2 };
+    } else if (boardShape === 'plus') {
+        const cx = board.width / 2 + adj.dx;
+        const cy = board.height / 2 + adj.dy;
+        const radius = Math.min(board.width, board.height) * 0.45 * adj.scale;
+        const thick = radius * 0.5;
+        board = applyMask(board, plusMask(cx, cy, radius, thick, rotationRad));
+        if (MASK_DEBUG) board.debugMask = { shape: 'plus', cx, cy, radius, thick, rotation: rotationRad };
     }
 
     board.startTileIds = findFairStartTileIds(board, configs.length);

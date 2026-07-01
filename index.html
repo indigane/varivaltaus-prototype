@@ -55,15 +55,26 @@
                             <option value="triangular">Triangular</option>
                             <option value="hexagonal">Hexagonal</option>
                             <option value="circular">Circular</option>
+                            <option value="ellipse-v">Ellipse (V)</option>
+                            <option value="ellipse-h">Ellipse (H)</option>
+                            <option value="gemstone">Gemstone</option>
+                            <option value="donut">Donut</option>
+                            <option value="hourglass-v">Hourglass (V)</option>
+                            <option value="hourglass-h">Hourglass (H)</option>
+                            <option value="plus">Plus-sign</option>
                         </select>
                     </div>
-                    <div class="setup-group">
+                    <div class="setup-group" id="cols-group">
                         <label>Columns <output id="board-cols-val">20</output></label>
                         <input type="range" id="board-cols" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-cols-val').textContent=this.value">
                     </div>
-                    <div class="setup-group">
+                    <div class="setup-group" id="rows-group">
                         <label>Rows <output id="board-rows-val">20</output></label>
                         <input type="range" id="board-rows" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-rows-val').textContent=this.value">
+                    </div>
+                    <div class="setup-group" id="size-group" style="display:none;">
+                        <label>Size <output id="board-size-val">25</output></label>
+                        <input type="range" id="board-size" value="25" min="10" max="80" step="1" oninput="document.getElementById('board-size-val').textContent=this.value">
                     </div>
                     <div class="setup-group">
                         <label>Colors <output id="color-count-val">6</output></label>
