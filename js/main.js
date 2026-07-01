@@ -2,8 +2,23 @@ import { createRNG } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
 import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
+import { generateTrihexagonalBoard } from './tilings/trihexagonal.js';
+import { generateTruncatedHexagonalBoard } from './tilings/truncated-hexagonal.js';
+import { generateTruncatedTrihexagonalBoard } from './tilings/truncated-trihexagonal.js';
+import { generateSnubSquareBoard } from './tilings/snub-square.js';
+import { generateSnubTrihexagonalBoard } from './tilings/snub-trihexagonal.js';
+import { generateElongatedTriangularBoard } from './tilings/elongated-triangular.js';
 import { generateRhombitrihexagonalBoard } from './tilings/rhombitrihexagonal.js';
 import { generateCairoPentagonBoard } from './tilings/pentagon.js';
+import {
+    generateDeltoidalTrihexagonalBoard,
+    generateFloretPentagonalBoard,
+    generateKisrhombilleBoard,
+    generatePrismaticPentagonalBoard,
+    generateRhombilleBoard,
+    generateTetrakisSquareBoard,
+    generateTriakisTriangularBoard
+} from './tilings/dual-semi-regular.js';
 import { generateOctagonalBoard } from './tilings/octagonal.js';
 import { generateVoronoiBoard } from './tilings/voronoi.js';
 import { applyMask, circularMask } from './tilings/masks.js';
@@ -98,10 +113,36 @@ function handleStart() {
         board = generateTriangleBoard({ ...commonOptions, cols: adjCols, rows, tileSize: tileSize * 1.2, shape: boardShape === 'triangular' ? 'triangular' : 'rectangular' });
     } else if (boardType === 'hex') {
         board = generateHexBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6, shape: boardShape === 'hexagonal' ? 'hexagonal' : 'rectangular' });
+    } else if (boardType === 'trihexagonal') {
+        board = generateTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6 });
+    } else if (boardType === 'truncated-hexagonal') {
+        board = generateTruncatedHexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
+    } else if (boardType === 'truncated-trihexagonal') {
+        board = generateTruncatedTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
+    } else if (boardType === 'snub-square') {
+        board = generateSnubSquareBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.6 });
+    } else if (boardType === 'snub-trihexagonal') {
+        board = generateSnubTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.5 });
+    } else if (boardType === 'elongated-triangular') {
+        board = generateElongatedTriangularBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.8 });
     } else if (boardType === 'rhombitrihexagonal') {
         board = generateRhombitrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
     } else if (boardType === 'pentagon-cairo') {
         board = generateCairoPentagonBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.5 });
+    } else if (boardType === 'pentagon-prismatic') {
+        board = generatePrismaticPentagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.0 });
+    } else if (boardType === 'pentagon-floret') {
+        board = generateFloretPentagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.65 });
+    } else if (boardType === 'deltoidal-trihexagonal') {
+        board = generateDeltoidalTrihexagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.9 });
+    } else if (boardType === 'rhombille') {
+        board = generateRhombilleBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.9 });
+    } else if (boardType === 'triakis-triangular') {
+        board = generateTriakisTriangularBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.1 });
+    } else if (boardType === 'kisrhombille') {
+        board = generateKisrhombilleBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.1 });
+    } else if (boardType === 'tetrakis-square') {
+        board = generateTetrakisSquareBoard({ ...commonOptions, cols, rows, tileSize });
     } else if (boardType === '4.8.8') {
         board = generateOctagonalBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.4 });
     } else if (boardType === 'voronoi-jittered') {

@@ -17,7 +17,7 @@ import (
 func main() {
 	mode := flag.String("mode", "sim", "Mode: sim, fairness, or search")
 	gameCount := flag.Int("games", 100, "Number of games (or batches) to simulate")
-	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, rhombitrihexagonal, pentagon-cairo, voronoi-jittered, voronoi-random)")
+	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, rhombitrihexagonal, pentagon-cairo, pentagon-prismatic, pentagon-floret, deltoidal-trihexagonal, rhombille, triakis-triangular, kisrhombille, tetrakis-square, voronoi-jittered, voronoi-random)")
 	colsFlag := flag.Int("cols", 20, "Number of columns")
 	rowsFlag := flag.Int("rows", 20, "Number of rows")
 	colorCountFlag := flag.Int("colors", 6, "Number of colors")
@@ -638,8 +638,34 @@ func generateBaseBoard(boardType string, opts tilings.Options) core.Board {
 		return tilings.GenerateTriangleBoard(opts)
 	case "hex":
 		return tilings.GenerateHexBoard(opts)
+	case "trihexagonal":
+		return tilings.GenerateTrihexagonalBoard(opts)
+	case "truncated-hexagonal":
+		return tilings.GenerateTruncatedHexagonalBoard(opts)
+	case "truncated-trihexagonal":
+		return tilings.GenerateTruncatedTrihexagonalBoard(opts)
+	case "snub-square":
+		return tilings.GenerateSnubSquareBoard(opts)
+	case "snub-trihexagonal":
+		return tilings.GenerateSnubTrihexagonalBoard(opts)
+	case "elongated-triangular":
+		return tilings.GenerateElongatedTriangularBoard(opts)
 	case "pentagon-cairo":
 		return tilings.GenerateCairoPentagonBoard(opts)
+	case "pentagon-prismatic":
+		return tilings.GeneratePrismaticPentagonalBoard(opts)
+	case "pentagon-floret":
+		return tilings.GenerateFloretPentagonalBoard(opts)
+	case "deltoidal-trihexagonal":
+		return tilings.GenerateDeltoidalTrihexagonalBoard(opts)
+	case "rhombille":
+		return tilings.GenerateRhombilleBoard(opts)
+	case "triakis-triangular":
+		return tilings.GenerateTriakisTriangularBoard(opts)
+	case "kisrhombille":
+		return tilings.GenerateKisrhombilleBoard(opts)
+	case "tetrakis-square":
+		return tilings.GenerateTetrakisSquareBoard(opts)
 	case "rhombitrihexagonal":
 		return tilings.GenerateRhombitrihexagonalBoard(opts)
 	case "4.8.8":

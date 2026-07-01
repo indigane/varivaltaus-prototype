@@ -21,7 +21,7 @@ go run cmd/sim/main.go [flags]
 
 - `-mode`: Operation mode: `sim` (standard simulation), `fairness` (analyze turn-order and spatial bias), or `search` (find optimal starting positions) (default: "sim")
 - `-games`: Number of games to simulate or batches to run (default: 100)
-- `-board`: Board type (`square`, `triangle`, `hex`, `rhombitrihexagonal`, `pentagon-cairo`, `voronoi-jittered`, `voronoi-random`) (default: "square")
+- `-board`: Board type (`square`, `triangle`, `hex`, `rhombitrihexagonal`, `pentagon-cairo`, `pentagon-prismatic`, `pentagon-floret`, `deltoidal-trihexagonal`, `rhombille`, `triakis-triangular`, `kisrhombille`, `tetrakis-square`, `voronoi-jittered`, `voronoi-random`) (default: "square")
 - `-cols`: Number of columns (default: 20)
 - `-rows`: Number of rows (default: 20)
 - `-colors`: Number of colors (default: 6)
