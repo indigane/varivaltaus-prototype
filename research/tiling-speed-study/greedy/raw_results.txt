@@ -359,3 +359,19 @@ Results:
   Player 1 (greedy): 424 (42.4%)
   Draw: 5 (0.5%)
 ----------------------------------------------------------------
+TILING: pythagorean
+Starting simulation of 1000 games on 20x20 pythagorean board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 5.820197017s (171.82 games/sec)
+Total tiles: 657
+Average turns: 39.49
+Turns per 100 tiles: 6.01
+Average winner dominance: 51.3%
+Average lead changes: 5.99
+Average Point of No Return: 36.6%
+Average Max Lead of Winner: 17.0%
+Results:
+  Player 0 (greedy): 564 (56.4%)
+  Player 1 (greedy): 436 (43.6%)
+----------------------------------------------------------------
