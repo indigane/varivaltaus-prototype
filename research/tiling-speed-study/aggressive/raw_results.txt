@@ -1,0 +1,357 @@
+Tiling Speed Study Data Collection (Aggressive Bots)
+Parameters: Games=1000, Size=20x20, Colors=6, Bots=aggressive,aggressive
+----------------------------------------------------------------
+TILING: square
+Starting simulation of 1000 games on 20x20 square board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 3.22816051s (309.77 games/sec)
+Total tiles: 400
+Average turns: 46.14
+Turns per 100 tiles: 11.54
+Average winner dominance: 50.7%
+Average lead changes: 6.12
+Average Point of No Return: 43.3%
+Average Max Lead of Winner: 14.7%
+Results:
+  Player 0 (aggressive): 544 (54.4%)
+  Player 1 (aggressive): 446 (44.6%)
+  Draw: 10 (1.0%)
+----------------------------------------------------------------
+TILING: triangle
+Starting simulation of 1000 games on 20x20 triangle board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 4.421869525s (226.15 games/sec)
+Total tiles: 400
+Average turns: 63.76
+Turns per 100 tiles: 15.94
+Average winner dominance: 50.1%
+Average lead changes: 6.26
+Average Point of No Return: 46.4%
+Average Max Lead of Winner: 13.0%
+Results:
+  Player 0 (aggressive): 549 (54.9%)
+  Player 1 (aggressive): 435 (43.5%)
+  Draw: 16 (1.6%)
+----------------------------------------------------------------
+TILING: hex
+Starting simulation of 1000 games on 20x20 hex board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 3.293798223s (303.60 games/sec)
+Total tiles: 400
+Average turns: 34.11
+Turns per 100 tiles: 8.53
+Average winner dominance: 51.4%
+Average lead changes: 5.76
+Average Point of No Return: 45.6%
+Average Max Lead of Winner: 16.8%
+Results:
+  Player 0 (aggressive): 559 (55.9%)
+  Player 1 (aggressive): 435 (43.5%)
+  Draw: 6 (0.6%)
+----------------------------------------------------------------
+TILING: trihexagonal
+Starting simulation of 1000 games on 20x20 trihexagonal board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 18.844293736s (53.07 games/sec)
+Total tiles: 1198
+Average turns: 72.53
+Turns per 100 tiles: 6.05
+Average winner dominance: 50.9%
+Average lead changes: 8.75
+Average Point of No Return: 45.1%
+Average Max Lead of Winner: 15.9%
+Results:
+  Player 0 (aggressive): 556 (55.6%)
+  Player 1 (aggressive): 442 (44.2%)
+  Draw: 2 (0.2%)
+----------------------------------------------------------------
+TILING: truncated-hexagonal
+Starting simulation of 1000 games on 20x20 truncated-hexagonal board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 13.455220205s (74.32 games/sec)
+Total tiles: 1198
+Average turns: 36.61
+Turns per 100 tiles: 3.06
+Average winner dominance: 52.0%
+Average lead changes: 6.70
+Average Point of No Return: 44.5%
+Average Max Lead of Winner: 19.7%
+Results:
+  Player 0 (aggressive): 533 (53.3%)
+  Player 1 (aggressive): 465 (46.5%)
+  Draw: 2 (0.2%)
+----------------------------------------------------------------
+TILING: truncated-trihexagonal
+Starting simulation of 1000 games on 20x20 truncated-trihexagonal board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 33.163604899s (30.15 games/sec)
+Total tiles: 2340
+Average turns: 59.07
+Turns per 100 tiles: 2.52
+Average winner dominance: 51.2%
+Average lead changes: 8.20
+Average Point of No Return: 45.8%
+Average Max Lead of Winner: 16.8%
+Results:
+  Player 0 (aggressive): 539 (53.9%)
+  Player 1 (aggressive): 459 (45.9%)
+  Draw: 2 (0.2%)
+----------------------------------------------------------------
+TILING: snub-square
+Starting simulation of 1000 games on 20x20 snub-square board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 48.828575479s (20.48 games/sec)
+Total tiles: 2521
+Average turns: 144.99
+Turns per 100 tiles: 5.75
+Average winner dominance: 50.5%
+Average lead changes: 10.85
+Average Point of No Return: 43.0%
+Average Max Lead of Winner: 15.2%
+Results:
+  Player 0 (aggressive): 502 (50.2%)
+  Player 1 (aggressive): 498 (49.8%)
+----------------------------------------------------------------
+TILING: snub-trihexagonal
+Starting simulation of 1000 games on 20x20 snub-trihexagonal board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 56.549420117s (17.68 games/sec)
+Total tiles: 3364
+Average turns: 142.87
+Turns per 100 tiles: 4.25
+Average winner dominance: 50.4%
+Average lead changes: 12.01
+Average Point of No Return: 44.8%
+Average Max Lead of Winner: 13.0%
+Results:
+  Player 0 (aggressive): 556 (55.6%)
+  Player 1 (aggressive): 443 (44.3%)
+  Draw: 1 (0.1%)
+----------------------------------------------------------------
+TILING: elongated-triangular
+Starting simulation of 1000 games on 20x20 elongated-triangular board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 20.858759741s (47.94 games/sec)
+Total tiles: 1160
+Average turns: 108.41
+Turns per 100 tiles: 9.35
+Average winner dominance: 50.9%
+Average lead changes: 7.49
+Average Point of No Return: 37.9%
+Average Max Lead of Winner: 27.0%
+Results:
+  Player 0 (aggressive): 473 (47.3%)
+  Player 1 (aggressive): 527 (52.7%)
+----------------------------------------------------------------
+TILING: pentagon-cairo
+Starting simulation of 1000 games on 20x20 pentagon-cairo board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 9.340417569s (107.06 games/sec)
+Total tiles: 800
+Average turns: 55.38
+Turns per 100 tiles: 6.92
+Average winner dominance: 50.7%
+Average lead changes: 7.24
+Average Point of No Return: 44.3%
+Average Max Lead of Winner: 14.0%
+Results:
+  Player 0 (aggressive): 573 (57.3%)
+  Player 1 (aggressive): 422 (42.2%)
+  Draw: 5 (0.5%)
+----------------------------------------------------------------
+TILING: pentagon-prismatic
+Starting simulation of 1000 games on 20x20 pentagon-prismatic board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 10.340535483s (96.71 games/sec)
+Total tiles: 722
+Average turns: 59.81
+Turns per 100 tiles: 8.28
+Average winner dominance: 51.6%
+Average lead changes: 6.10
+Average Point of No Return: 36.5%
+Average Max Lead of Winner: 26.2%
+Results:
+  Player 0 (aggressive): 488 (48.8%)
+  Player 1 (aggressive): 511 (51.1%)
+  Draw: 1 (0.1%)
+----------------------------------------------------------------
+TILING: pentagon-floret
+Starting simulation of 1000 games on 20x20 pentagon-floret board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 41.985593935s (23.82 games/sec)
+Total tiles: 2166
+Average turns: 102.19
+Turns per 100 tiles: 4.72
+Average winner dominance: 50.8%
+Average lead changes: 10.23
+Average Point of No Return: 43.8%
+Average Max Lead of Winner: 15.7%
+Results:
+  Player 0 (aggressive): 494 (49.4%)
+  Player 1 (aggressive): 506 (50.6%)
+----------------------------------------------------------------
+TILING: deltoidal-trihexagonal
+Starting simulation of 1000 games on 20x20 deltoidal-trihexagonal board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 40.779484111s (24.52 games/sec)
+Total tiles: 2400
+Average turns: 125.77
+Turns per 100 tiles: 5.24
+Average winner dominance: 50.4%
+Average lead changes: 11.10
+Average Point of No Return: 46.5%
+Average Max Lead of Winner: 12.6%
+Results:
+  Player 0 (aggressive): 552 (55.2%)
+  Player 1 (aggressive): 446 (44.6%)
+  Draw: 2 (0.2%)
+----------------------------------------------------------------
+TILING: rhombille
+Starting simulation of 1000 games on 20x20 rhombille board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 22.191085228s (45.06 games/sec)
+Total tiles: 1121
+Average turns: 91.83
+Turns per 100 tiles: 8.19
+Average winner dominance: 50.7%
+Average lead changes: 9.12
+Average Point of No Return: 46.7%
+Average Max Lead of Winner: 14.1%
+Results:
+  Player 0 (aggressive): 543 (54.3%)
+  Player 1 (aggressive): 457 (45.7%)
+----------------------------------------------------------------
+TILING: triakis-triangular
+Starting simulation of 1000 games on 20x20 triakis-triangular board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 1m4.065384436s (15.61 games/sec)
+Total tiles: 2400
+Average turns: 223.82
+Turns per 100 tiles: 9.33
+Average winner dominance: 50.1%
+Average lead changes: 13.65
+Average Point of No Return: 45.9%
+Average Max Lead of Winner: 10.9%
+Results:
+  Player 0 (aggressive): 579 (57.9%)
+  Player 1 (aggressive): 419 (41.9%)
+  Draw: 2 (0.2%)
+----------------------------------------------------------------
+TILING: kisrhombille
+Starting simulation of 1000 games on 20x20 kisrhombille board with 6 colors
+Bots: aggressive,aggressive
+TILING: kisrhombille
+Starting simulation of 1000 games on 20x20 kisrhombille board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 2m25.787254771s (6.86 games/sec)
+Total tiles: 4800
+Average turns: 278.95
+Turns per 100 tiles: 5.81
+Average winner dominance: 50.2%
+Average lead changes: 15.39
+Average Point of No Return: 44.3%
+Average Max Lead of Winner: 12.1%
+Results:
+  Player 0 (aggressive): 496 (49.6%)
+  Player 1 (aggressive): 503 (50.3%)
+  Draw: 1 (0.1%)
+----------------------------------------------------------------
+TILING: tetrakis-square
+Starting simulation of 1000 games on 20x20 tetrakis-square board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 34.867365639s (28.68 games/sec)
+Total tiles: 1600
+Average turns: 150.33
+Turns per 100 tiles: 9.40
+Average winner dominance: 50.4%
+Average lead changes: 10.72
+Average Point of No Return: 43.6%
+Average Max Lead of Winner: 13.6%
+Results:
+  Player 0 (aggressive): 499 (49.9%)
+  Player 1 (aggressive): 500 (50.0%)
+  Draw: 1 (0.1%)
+----------------------------------------------------------------
+TILING: rhombitrihexagonal
+Starting simulation of 1000 games on 20x20 rhombitrihexagonal board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 34.104837172s (29.32 games/sec)
+Total tiles: 2559
+Average turns: 95.31
+Turns per 100 tiles: 3.72
+Average winner dominance: 50.7%
+Average lead changes: 10.32
+Average Point of No Return: 45.9%
+Average Max Lead of Winner: 15.0%
+Results:
+  Player 0 (aggressive): 514 (51.4%)
+  Player 1 (aggressive): 486 (48.6%)
+----------------------------------------------------------------
+TILING: 4.8.8
+Starting simulation of 1000 games on 20x20 4.8.8 board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 8.21674716s (121.70 games/sec)
+Total tiles: 841
+Average turns: 41.69
+Turns per 100 tiles: 4.96
+Average winner dominance: 51.6%
+Average lead changes: 6.40
+Average Point of No Return: 43.2%
+Average Max Lead of Winner: 19.1%
+Results:
+  Player 0 (aggressive): 568 (56.8%)
+  Player 1 (aggressive): 432 (43.2%)
+----------------------------------------------------------------
+TILING: voronoi-jittered
+Starting simulation of 1000 games on 20x20 voronoi-jittered board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 46.573836691s (21.47 games/sec)
+Total tiles: 400
+Average turns: 32.10
+Turns per 100 tiles: 8.03
+Average winner dominance: 51.5%
+Average lead changes: 5.51
+Average Point of No Return: 44.0%
+Average Max Lead of Winner: 17.6%
+Results:
+  Player 0 (aggressive): 572 (57.2%)
+  Player 1 (aggressive): 423 (42.3%)
+  Draw: 5 (0.5%)
+----------------------------------------------------------------
+TILING: voronoi-random
+Starting simulation of 1000 games on 20x20 voronoi-random board with 6 colors
+Bots: aggressive,aggressive
+
+Simulation finished in 48.215706217s (20.74 games/sec)
+Total tiles: 400
+Average turns: 22.99
+Turns per 100 tiles: 5.75
+Average winner dominance: 52.5%
+Average lead changes: 3.85
+Average Point of No Return: 35.0%
+Average Max Lead of Winner: 23.4%
+Results:
+  Player 0 (aggressive): 581 (58.1%)
+  Player 1 (aggressive): 414 (41.4%)
+  Draw: 5 (0.5%)
+----------------------------------------------------------------

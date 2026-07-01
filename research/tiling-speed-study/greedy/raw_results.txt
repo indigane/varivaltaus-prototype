@@ -1,0 +1,361 @@
+Tiling Speed Study Data Collection
+Parameters: Games=1000, Size=20x20, Colors=6, Bots=greedy,greedy
+----------------------------------------------------------------
+TILING: square
+Starting simulation of 1000 games on 20x20 square board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 3.490591976s (286.48 games/sec)
+Total tiles: 400
+Average turns: 44.67
+Turns per 100 tiles: 11.17
+Average winner dominance: 50.0%
+Average lead changes: 6.68
+Average Point of No Return: 38.3%
+Average Max Lead of Winner: 12.5%
+Results:
+  Player 0 (greedy): 538 (53.8%)
+  Player 1 (greedy): 442 (44.2%)
+  Draw: 20 (2.0%)
+----------------------------------------------------------------
+TILING: triangle
+Starting simulation of 1000 games on 20x20 triangle board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 4.622275023s (216.34 games/sec)
+Total tiles: 400
+Average turns: 61.92
+Turns per 100 tiles: 15.48
+Average winner dominance: 49.6%
+Average lead changes: 6.88
+Average Point of No Return: 39.3%
+Average Max Lead of Winner: 10.3%
+Results:
+  Player 0 (greedy): 553 (55.3%)
+  Player 1 (greedy): 423 (42.3%)
+  Draw: 24 (2.4%)
+----------------------------------------------------------------
+TILING: hex
+Starting simulation of 1000 games on 20x20 hex board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 4.302869287s (232.40 games/sec)
+Total tiles: 400
+Average turns: 32.64
+Turns per 100 tiles: 8.16
+Average winner dominance: 50.9%
+Average lead changes: 5.78
+Average Point of No Return: 37.7%
+Average Max Lead of Winner: 14.8%
+Results:
+  Player 0 (greedy): 566 (56.6%)
+  Player 1 (greedy): 422 (42.2%)
+  Draw: 12 (1.2%)
+----------------------------------------------------------------
+TILING: trihexagonal
+Starting simulation of 1000 games on 20x20 trihexagonal board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 22.223935156s (45.00 games/sec)
+Total tiles: 1198
+Average turns: 76.50
+Turns per 100 tiles: 6.39
+Average winner dominance: 50.4%
+Average lead changes: 9.77
+Average Point of No Return: 37.2%
+Average Max Lead of Winner: 11.3%
+Results:
+  Player 0 (greedy): 501 (50.1%)
+  Player 1 (greedy): 494 (49.4%)
+  Draw: 5 (0.5%)
+----------------------------------------------------------------
+TILING: truncated-hexagonal
+Starting simulation of 1000 games on 20x20 truncated-hexagonal board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 14.165260217s (70.60 games/sec)
+Total tiles: 1198
+Average turns: 38.06
+Turns per 100 tiles: 3.18
+Average winner dominance: 51.1%
+Average lead changes: 6.77
+Average Point of No Return: 37.4%
+Average Max Lead of Winner: 16.3%
+Results:
+  Player 0 (greedy): 530 (53.0%)
+  Player 1 (greedy): 467 (46.7%)
+  Draw: 3 (0.3%)
+----------------------------------------------------------------
+TILING: truncated-trihexagonal
+Starting simulation of 1000 games on 20x20 truncated-trihexagonal board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 33.885404489s (29.51 games/sec)
+Total tiles: 2340
+Average turns: 63.18
+Turns per 100 tiles: 2.70
+Average winner dominance: 50.5%
+Average lead changes: 8.06
+Average Point of No Return: 34.7%
+Average Max Lead of Winner: 13.1%
+Results:
+  Player 0 (greedy): 551 (55.1%)
+  Player 1 (greedy): 445 (44.5%)
+  Draw: 4 (0.4%)
+----------------------------------------------------------------
+TILING: snub-square
+Starting simulation of 1000 games on 20x20 snub-square board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 54.220106237s (18.44 games/sec)
+Total tiles: 2521
+Average turns: 162.70
+Turns per 100 tiles: 6.45
+Average winner dominance: 50.3%
+Average lead changes: 13.08
+Average Point of No Return: 35.3%
+Average Max Lead of Winner: 8.5%
+Results:
+  Player 0 (greedy): 551 (55.1%)
+  Player 1 (greedy): 449 (44.9%)
+----------------------------------------------------------------
+TILING: snub-trihexagonal
+Starting simulation of 1000 games on 20x20 snub-trihexagonal board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 1m1.411995033s (16.28 games/sec)
+Total tiles: 3364
+Average turns: 156.86
+Turns per 100 tiles: 4.66
+Average winner dominance: 50.1%
+Average lead changes: 14.75
+Average Point of No Return: 36.3%
+Average Max Lead of Winner: 7.9%
+Results:
+  Player 0 (greedy): 448 (44.8%)
+  Player 1 (greedy): 548 (54.8%)
+  Draw: 4 (0.4%)
+----------------------------------------------------------------
+TILING: elongated-triangular
+Starting simulation of 1000 games on 20x20 elongated-triangular board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 25.908023485s (38.60 games/sec)
+Total tiles: 1160
+Average turns: 121.92
+Turns per 100 tiles: 10.51
+Average winner dominance: 50.4%
+Average lead changes: 8.95
+Average Point of No Return: 35.5%
+Average Max Lead of Winner: 16.3%
+Results:
+  Player 0 (greedy): 511 (51.1%)
+  Player 1 (greedy): 486 (48.6%)
+  Draw: 3 (0.3%)
+----------------------------------------------------------------
+TILING: pentagon-cairo
+Starting simulation of 1000 games on 20x20 pentagon-cairo board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 9.055847949s (110.43 games/sec)
+Total tiles: 800
+Average turns: 54.58
+Turns per 100 tiles: 6.82
+Average winner dominance: 50.5%
+Average lead changes: 8.03
+Average Point of No Return: 37.2%
+Average Max Lead of Winner: 11.7%
+Results:
+  Player 0 (greedy): 550 (55.0%)
+  Player 1 (greedy): 444 (44.4%)
+  Draw: 6 (0.6%)
+----------------------------------------------------------------
+TILING: pentagon-prismatic
+Starting simulation of 1000 games on 20x20 pentagon-prismatic board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 12.17004371s (82.17 games/sec)
+Total tiles: 722
+Average turns: 65.99
+Turns per 100 tiles: 9.14
+Average winner dominance: 50.9%
+Average lead changes: 6.66
+Average Point of No Return: 33.5%
+Average Max Lead of Winner: 19.8%
+Results:
+  Player 0 (greedy): 536 (53.6%)
+  Player 1 (greedy): 462 (46.2%)
+  Draw: 2 (0.2%)
+----------------------------------------------------------------
+TILING: pentagon-floret
+Starting simulation of 1000 games on 20x20 pentagon-floret board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 45.856262456s (21.81 games/sec)
+Total tiles: 2166
+Average turns: 109.34
+Turns per 100 tiles: 5.05
+Average winner dominance: 50.2%
+Average lead changes: 12.11
+Average Point of No Return: 37.8%
+Average Max Lead of Winner: 9.5%
+Results:
+  Player 0 (greedy): 506 (50.6%)
+  Player 1 (greedy): 490 (49.0%)
+  Draw: 4 (0.4%)
+----------------------------------------------------------------
+TILING: deltoidal-trihexagonal
+Starting simulation of 1000 games on 20x20 deltoidal-trihexagonal board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 44.86501337s (22.29 games/sec)
+Total tiles: 2400
+Average turns: 138.09
+Turns per 100 tiles: 5.75
+Average winner dominance: 50.2%
+Average lead changes: 12.80
+Average Point of No Return: 35.5%
+Average Max Lead of Winner: 8.4%
+Results:
+  Player 0 (greedy): 472 (47.2%)
+  Player 1 (greedy): 525 (52.5%)
+  Draw: 3 (0.3%)
+----------------------------------------------------------------
+TILING: rhombille
+Starting simulation of 1000 games on 20x20 rhombille board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 23.70600574s (42.18 games/sec)
+Total tiles: 1121
+Average turns: 97.46
+Turns per 100 tiles: 8.69
+Average winner dominance: 50.5%
+Average lead changes: 9.94
+Average Point of No Return: 35.8%
+Average Max Lead of Winner: 10.0%
+Results:
+  Player 0 (greedy): 500 (50.0%)
+  Player 1 (greedy): 500 (50.0%)
+----------------------------------------------------------------
+TILING: triakis-triangular
+Starting simulation of 1000 games on 20x20 triakis-triangular board with 6 colors
+Bots: greedy,greedy
+TILING: triakis-triangular
+Starting simulation of 1000 games on 20x20 triakis-triangular board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 1m14.055418433s (13.50 games/sec)
+Total tiles: 2400
+Average turns: 256.69
+Turns per 100 tiles: 10.70
+Average winner dominance: 50.1%
+Average lead changes: 15.70
+Average Point of No Return: 36.1%
+Average Max Lead of Winner: 6.4%
+Results:
+  Player 0 (greedy): 519 (51.9%)
+  Player 1 (greedy): 479 (47.9%)
+  Draw: 2 (0.2%)
+----------------------------------------------------------------
+TILING: kisrhombille
+Starting simulation of 1000 games on 20x20 kisrhombille board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 2m33.330715897s (6.52 games/sec)
+Total tiles: 4800
+Average turns: 315.43
+Turns per 100 tiles: 6.57
+Average winner dominance: 50.0%
+Average lead changes: 19.99
+Average Point of No Return: 35.6%
+Average Max Lead of Winner: 5.6%
+Results:
+  Player 0 (greedy): 463 (46.3%)
+  Player 1 (greedy): 534 (53.4%)
+  Draw: 3 (0.3%)
+----------------------------------------------------------------
+TILING: tetrakis-square
+Starting simulation of 1000 games on 20x20 tetrakis-square board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 38.087100125s (26.26 games/sec)
+Total tiles: 1600
+Average turns: 166.67
+Turns per 100 tiles: 10.42
+Average winner dominance: 50.0%
+Average lead changes: 12.62
+Average Point of No Return: 36.8%
+Average Max Lead of Winner: 8.4%
+Results:
+  Player 0 (greedy): 532 (53.2%)
+  Player 1 (greedy): 461 (46.1%)
+  Draw: 7 (0.7%)
+----------------------------------------------------------------
+TILING: rhombitrihexagonal
+Starting simulation of 1000 games on 20x20 rhombitrihexagonal board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 34.279590684s (29.17 games/sec)
+Total tiles: 2559
+Average turns: 103.08
+Turns per 100 tiles: 4.03
+Average winner dominance: 50.4%
+Average lead changes: 11.97
+Average Point of No Return: 36.7%
+Average Max Lead of Winner: 10.0%
+Results:
+  Player 0 (greedy): 476 (47.6%)
+  Player 1 (greedy): 524 (52.4%)
+----------------------------------------------------------------
+TILING: 4.8.8
+Starting simulation of 1000 games on 20x20 4.8.8 board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 8.425853749s (118.68 games/sec)
+Total tiles: 841
+Average turns: 44.04
+Turns per 100 tiles: 5.24
+Average winner dominance: 51.0%
+Average lead changes: 6.69
+Average Point of No Return: 36.3%
+Average Max Lead of Winner: 15.7%
+Results:
+  Player 0 (greedy): 555 (55.5%)
+  Player 1 (greedy): 445 (44.5%)
+----------------------------------------------------------------
+TILING: voronoi-jittered
+Starting simulation of 1000 games on 20x20 voronoi-jittered board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 52.330180299s (19.11 games/sec)
+Total tiles: 400
+Average turns: 30.34
+Turns per 100 tiles: 7.58
+Average winner dominance: 51.3%
+Average lead changes: 5.51
+Average Point of No Return: 36.7%
+Average Max Lead of Winner: 15.9%
+Results:
+  Player 0 (greedy): 576 (57.6%)
+  Player 1 (greedy): 418 (41.8%)
+  Draw: 6 (0.6%)
+----------------------------------------------------------------
+TILING: voronoi-random
+Starting simulation of 1000 games on 20x20 voronoi-random board with 6 colors
+Bots: greedy,greedy
+Starting simulation of 1000 games on 20x20 voronoi-random board with 6 colors
+Bots: greedy,greedy
+
+Simulation finished in 54.169000703s (18.46 games/sec)
+Total tiles: 400
+Average turns: 20.76
+Turns per 100 tiles: 5.19
+Average winner dominance: 52.3%
+Average lead changes: 3.66
+Average Point of No Return: 30.4%
+Average Max Lead of Winner: 24.1%
+Results:
+  Player 0 (greedy): 571 (57.1%)
+  Player 1 (greedy): 424 (42.4%)
+  Draw: 5 (0.5%)
+----------------------------------------------------------------
