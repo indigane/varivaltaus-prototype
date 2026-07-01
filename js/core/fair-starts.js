@@ -1,10 +1,11 @@
 /**
  * Utility to find fair starting positions on an arbitrary graph.
  *
- * Prefer research-backed normalized anchor templates where available, then fall
- * back to a deterministic max-min graph-distance heuristic. Normalized anchors
- * are resolved against the generated board bounds, so they scale with board
- * size, tile size, and post-generation masks.
+ * Prefer research-backed normalized anchor templates where available, then use
+ * geometry-aware starts for masked boards, and finally fall back to a
+ * deterministic max-min graph-distance heuristic. Normalized anchors are
+ * resolved against the generated board bounds, so they scale with board size,
+ * tile size, and post-generation masks.
  */
 
 const FAIR_START_TEMPLATES = [
@@ -32,17 +33,50 @@ const FAIR_START_TEMPLATES = [
     }
 ];
 
+const RADIAL_MASK_SHAPES = new Set([
+    'circular',
+    'donut',
+    'hexagonal',
+    'ellipse-v',
+    'ellipse-h',
+    'gemstone',
+    'hourglass-v',
+    'hourglass-h',
+    'plus'
+]);
+
+const HORIZONTAL_TWO_PLAYER_SHAPES = new Set([
+    'circular',
+    'donut',
+    'hexagonal',
+    'ellipse-h',
+    'gemstone',
+    'hourglass-h',
+    'plus'
+]);
+
+const VERTICAL_TWO_PLAYER_SHAPES = new Set([
+    'ellipse-v',
+    'hourglass-v',
+    'triangular'
+]);
+
 export function findFairStartTileIds(board, playerCount, context = {}) {
     if (playerCount <= 0 || !board?.tiles?.length) return [];
-    if (playerCount === 1) return [board.tiles[0].id];
 
-    const template = findFairStartTemplate(board, playerCount, context);
+    const targetCount = Math.min(playerCount, board.tiles.length);
+    if (targetCount === 1) return [board.tiles[0].id];
+
+    const template = findFairStartTemplate(board, targetCount, context);
     if (template) {
         const resolvedIds = resolveNormalizedAnchorsToTileIds(board, template.anchors);
-        if (resolvedIds.length === playerCount) return resolvedIds;
+        if (resolvedIds.length === targetCount) return resolvedIds;
     }
 
-    return findGraphHeuristicStartTileIds(board, playerCount);
+    const geometryAwareIds = findGeometryAwareStartTileIds(board, targetCount, context);
+    if (geometryAwareIds.length === targetCount) return geometryAwareIds;
+
+    return findGraphHeuristicStartTileIds(board, targetCount);
 }
 
 export function getRecommendedBoardTypes(playerCount) {
@@ -115,18 +149,48 @@ function findFairStartTemplate(board, playerCount, context) {
     });
 }
 
+function findGeometryAwareStartTileIds(board, playerCount, context) {
+    const boardShape = context.boardShape ?? board.shape;
+    if (!boardShape || boardShape === 'rectangular') return [];
+
+    if (playerCount === 2) {
+        if (HORIZONTAL_TWO_PLAYER_SHAPES.has(boardShape)) {
+            return findAxisExtremePair(board, 'x');
+        }
+        if (VERTICAL_TWO_PLAYER_SHAPES.has(boardShape)) {
+            return findAxisExtremePair(board, 'y');
+        }
+    }
+
+    if (!RADIAL_MASK_SHAPES.has(boardShape)) return [];
+
+    const bounds = getCentroidBounds(board);
+    if (!bounds) return [];
+
+    // Place multi-player starts around the actual masked footprint instead of
+    // using the board center as a late max-min candidate. This is especially
+    // important for circular 6-8 player games where center starts dominate.
+    const targets = createRadialPerimeterTargets(bounds, playerCount);
+    return resolveTargetsToTileIds(board, targets);
+}
+
 function resolveNormalizedAnchorsToTileIds(board, anchors) {
     const bounds = getBoardBounds(board);
     if (!bounds) return [];
 
+    const targets = anchors.map(([nx, ny]) => ([
+        bounds.minX + nx * bounds.width,
+        bounds.minY + ny * bounds.height
+    ]));
+
+    return resolveTargetsToTileIds(board, targets);
+}
+
+function resolveTargetsToTileIds(board, targets) {
     const selected = [];
     const selectedSet = new Set();
 
-    for (const [nx, ny] of anchors) {
-        const target = [
-            bounds.minX + nx * bounds.width,
-            bounds.minY + ny * bounds.height
-        ];
+    for (const target of targets) {
         const tile = findNearestUnselectedTile(board, target, selectedSet);
         if (!tile) break;
 
@@ -137,27 +201,94 @@ function resolveNormalizedAnchorsToTileIds(board, anchors) {
     return selected;
 }
 
+function createRadialPerimeterTargets(bounds, playerCount) {
+    const cx = (bounds.minX + bounds.maxX) / 2;
+    const cy = (bounds.minY + bounds.maxY) / 2;
+    const rx = bounds.width / 2;
+    const ry = bounds.height / 2;
+
+    // Two-player radial shapes are handled by exact axis extremes above. For
+    // larger counts, start at the top and walk clockwise so the sequence itself
+    // stays spatially coherent for UI edge/strip assignment.
+    const startAngle = -Math.PI / 2;
+    const targets = [];
+
+    for (let i = 0; i < playerCount; i++) {
+        const angle = startAngle + (2 * Math.PI * i) / playerCount;
+        targets.push([
+            cx + Math.cos(angle) * rx,
+            cy + Math.sin(angle) * ry
+        ]);
+    }
+
+    return targets;
+}
+
+function findAxisExtremePair(board, axis) {
+    const bounds = getCentroidBounds(board);
+    if (!bounds) return [];
+
+    const axisIndex = axis === 'x' ? 0 : 1;
+    const perpendicularIndex = axis === 'x' ? 1 : 0;
+    const perpendicularCenter = axis === 'x'
+        ? (bounds.minY + bounds.maxY) / 2
+        : (bounds.minX + bounds.maxX) / 2;
+
+    let minTile = null;
+    let maxTile = null;
+    let minValue = Infinity;
+    let maxValue = -Infinity;
+    let minTieDistance = Infinity;
+    let maxTieDistance = Infinity;
+
+    for (const tile of board.tiles) {
+        const c = centroid(tile.points);
+        const value = c[axisIndex];
+        const tieDistance = Math.abs(c[perpendicularIndex] - perpendicularCenter);
+
+        if (value < minValue - Number.EPSILON || (Math.abs(value - minValue) <= Number.EPSILON && tieDistance < minTieDistance)) {
+            minValue = value;
+            minTieDistance = tieDistance;
+            minTile = tile;
+        }
+
+        if (value > maxValue + Number.EPSILON || (Math.abs(value - maxValue) <= Number.EPSILON && tieDistance < maxTieDistance)) {
+            maxValue = value;
+            maxTieDistance = tieDistance;
+            maxTile = tile;
+        }
+    }
+
+    if (!minTile || !maxTile) return [];
+    if (minTile.id === maxTile.id) return [minTile.id];
+
+    return [minTile.id, maxTile.id];
+}
+
 function findGraphHeuristicStartTileIds(board, playerCount) {
     const selectedIds = [];
     const candidateIds = findCandidateTileIds(board);
+    const fallbackIds = board.tiles.map(t => t.id);
+    const searchIds = candidateIds.length >= playerCount ? candidateIds : fallbackIds;
 
     if (playerCount === 2) {
         let maxDist = -1;
-        let bestPair = [candidateIds[0], candidateIds[1] ?? candidateIds[0]];
+        let bestPair = [searchIds[0], searchIds[1] ?? searchIds[0]];
 
-        for (const startId of candidateIds) {
+        for (const startId of searchIds) {
             const dMap = computeDistances(board, startId);
-            for (const tile of board.tiles) {
-                const d = dMap[tile.id];
+            for (const tileId of searchIds) {
+                if (tileId === startId) continue;
+                const d = dMap[tileId];
                 if (d !== undefined && d > maxDist) {
                     maxDist = d;
-                    bestPair = [startId, tile.id];
+                    bestPair = [startId, tileId];
                 }
             }
         }
         selectedIds.push(...bestPair);
     } else {
-        selectedIds.push(candidateIds[0] ?? board.tiles[0].id);
+        selectedIds.push(searchIds[0] ?? board.tiles[0].id);
     }
 
     while (selectedIds.length < playerCount) {
@@ -166,18 +297,29 @@ function findGraphHeuristicStartTileIds(board, playerCount) {
 
         const distances = selectedIds.map(startId => computeDistances(board, startId));
 
-        for (const tile of board.tiles) {
-            if (selectedIds.includes(tile.id)) continue;
+        for (const tileId of searchIds) {
+            if (selectedIds.includes(tileId)) continue;
 
             let minDistance = Infinity;
             for (const dMap of distances) {
-                const d = dMap[tile.id] === undefined ? Infinity : dMap[tile.id];
+                const d = dMap[tileId] === undefined ? Infinity : dMap[tileId];
                 if (d < minDistance) minDistance = d;
             }
 
             if (minDistance !== Infinity && minDistance > maxMinDistance) {
                 maxMinDistance = minDistance;
-                bestTileId = tile.id;
+                bestTileId = tileId;
+            }
+        }
+
+        // If perimeter candidates cannot supply enough connected starts, fall
+        // back to any unselected tile rather than returning duplicates.
+        if (bestTileId === -1 && searchIds !== fallbackIds) {
+            for (const tileId of fallbackIds) {
+                if (!selectedIds.includes(tileId)) {
+                    bestTileId = tileId;
+                    break;
+                }
             }
         }
 
@@ -200,8 +342,7 @@ function findCandidateTileIds(board) {
         [bounds.minX + bounds.width / 2, bounds.minY],
         [bounds.minX + bounds.width / 2, bounds.maxY],
         [bounds.minX, bounds.minY + bounds.height / 2],
-        [bounds.maxX, bounds.minY + bounds.height / 2],
-        [bounds.minX + bounds.width / 2, bounds.minY + bounds.height / 2]
+        [bounds.maxX, bounds.minY + bounds.height / 2]
     ];
 
     const candidates = new Set();
@@ -228,6 +369,32 @@ function getBoardBounds(board) {
             if (y < minY) minY = y;
             if (y > maxY) maxY = y;
         }
+    }
+
+    return {
+        minX,
+        maxX,
+        minY,
+        maxY,
+        width: maxX - minX,
+        height: maxY - minY
+    };
+}
+
+function getCentroidBounds(board) {
+    if (!board.tiles.length) return null;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    for (const tile of board.tiles) {
+        const [cx, cy] = centroid(tile.points);
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
     }
 
     return {
@@ -272,13 +439,14 @@ function centroid(points) {
 }
 
 function computeDistances(board, startId) {
+    const tileById = new Map(board.tiles.map(tile => [tile.id, tile]));
     const distances = {};
     const queue = [[startId, 0]];
     distances[startId] = 0;
 
     while (queue.length > 0) {
         const [id, d] = queue.shift();
-        const tile = board.tiles[id];
+        const tile = tileById.get(id);
         if (!tile) continue;
 
         for (const neighborId of tile.neighbors) {
