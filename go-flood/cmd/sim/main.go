@@ -178,6 +178,7 @@ type maskAdjustment struct {
 	dy       float64
 	scale    float64
 	rotation float64
+	BySize   map[int]maskAdjustment
 }
 
 var maskAdjustments = map[string]map[string]maskAdjustment{
@@ -225,6 +226,11 @@ func runSingleGame(cfg studyConfig, rng core.RNG, overrideStartTiles []int) game
 		if m, ok := maskAdjustments[cfg.boardType]; ok {
 			if a, ok := m[cfg.mask]; ok {
 				adj = a
+				if a.BySize != nil {
+					if sa, ok := a.BySize[cfg.cols]; ok {
+						adj = sa
+					}
+				}
 			}
 		}
 
@@ -624,6 +630,11 @@ func performFairnessBatch(batchCount int, cfg studyConfig, fixedStartTiles []int
 					if m, ok := maskAdjustments[cfg.boardType]; ok {
 						if a, ok := m[cfg.mask]; ok {
 							adj = a
+							if a.BySize != nil {
+								if sa, ok := a.BySize[cfg.cols]; ok {
+									adj = sa
+								}
+							}
 						}
 					}
 

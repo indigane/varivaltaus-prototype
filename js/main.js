@@ -104,8 +104,13 @@ function handleStart() {
 
     const boardType = document.getElementById('board-type').value;
     const boardShape = document.getElementById('board-shape').value;
-    const cols = parseInt(document.getElementById('board-cols').value);
-    const rows = parseInt(document.getElementById('board-rows').value);
+    let cols = parseInt(document.getElementById('board-cols').value);
+    let rows = parseInt(document.getElementById('board-rows').value);
+    if (boardShape !== 'rectangular') {
+        const size = parseInt(document.getElementById('board-size').value);
+        cols = size;
+        rows = size;
+    }
     const tileSize = 25;
     const colorCount = parseInt(document.getElementById('color-count').value);
     const colorRestrictions = document.getElementById('color-restrictions').value;
@@ -172,7 +177,9 @@ function handleStart() {
         board = generateVoronoiBoard({ ...commonOptions, cols, rows, tileSize, type: 'random' });
     }
 
-    const adj = (MASK_ADJUSTMENTS[boardType] && MASK_ADJUSTMENTS[boardType][boardShape]) || { dx: 0, dy: 0, scale: 1.0, rotation: 0 };
+    const adjLookup = (MASK_ADJUSTMENTS[boardType] && MASK_ADJUSTMENTS[boardType][boardShape]) || { dx: 0, dy: 0, scale: 1.0, rotation: 0 };
+    // Support size-specific adjustments: if adjLookup[cols] exists, use it
+    const adj = adjLookup[cols] || adjLookup;
     const rotationRad = (adj.rotation || 0) * Math.PI / 180;
 
     if (boardShape === 'circular') {

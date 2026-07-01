@@ -79,6 +79,12 @@ export function setupUI(state, onColorSelect, onReset, onStep, onTogglePlay) {
     const resetBtn = document.getElementById('reset-button');
     resetBtn.onclick = onReset;
 
+    const shapeSelect = document.getElementById('board-shape');
+    if (shapeSelect) {
+        shapeSelect.onchange = () => updateBoardDimensionsVisibility();
+        updateBoardDimensionsVisibility();
+    }
+
     const addPlayerBtn = document.getElementById('add-player-button');
     if (addPlayerBtn) {
         addPlayerBtn.onclick = () => {
@@ -549,6 +555,25 @@ function renderTeamAssign() {
         row.appendChild(btnGroup);
         panel.appendChild(row);
     });
+}
+
+function updateBoardDimensionsVisibility() {
+    const shapeSelect = document.getElementById('board-shape');
+    const colsGroup = document.getElementById('cols-group');
+    const rowsGroup = document.getElementById('rows-group');
+    const sizeGroup = document.getElementById('size-group');
+
+    if (!shapeSelect || !colsGroup || !rowsGroup || !sizeGroup) return;
+
+    if (shapeSelect.value === 'rectangular') {
+        colsGroup.style.display = '';
+        rowsGroup.style.display = '';
+        sizeGroup.style.display = 'none';
+    } else {
+        colsGroup.style.display = 'none';
+        rowsGroup.style.display = 'none';
+        sizeGroup.style.display = '';
+    }
 }
 
 function renderPlayerSetup() {
