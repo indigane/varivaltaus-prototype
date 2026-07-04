@@ -1,6 +1,12 @@
 import { validateBoardGraph } from '../core/graph.js';
 import { generateSquareBoard } from '../tilings/square.js';
 import { generateBrickBoard } from '../tilings/brick.js';
+import { generateBasketWeaveBoard } from '../tilings/basket-weave.js';
+import { generateWaffleBoard } from '../tilings/waffle.js';
+import { generateTriangularWeaveBoard } from '../tilings/triangular-weave.js';
+import { generateTwoTriangleWeaveBoard } from '../tilings/two-triangle-weave.js';
+import { generateHexParallelogramWeaveBoard } from '../tilings/hex-parallelogram-weave.js';
+import { generateTrapezoidTriangleWeaveBoard } from '../tilings/trapezoid-triangle-weave.js';
 import { generateTriangleBoard } from '../tilings/triangle.js';
 import { generateHexBoard } from '../tilings/hex.js';
 import { generateRhombitrihexagonalBoard } from '../tilings/rhombitrihexagonal.js';
@@ -32,6 +38,21 @@ export function runTilingTests() {
 
     testGenerator("Square", () => generateSquareBoard(options));
     testGenerator("Brick", () => generateBrickBoard(options));
+    testGenerator("Basket Weave", () => generateBasketWeaveBoard(options));
+    testBasketWeaveBalancedEdges(generateBasketWeaveBoard, options);
+    testGenerator("Waffle", () => generateWaffleBoard(options));
+    testGenerator("Triangular Weave", () => generateTriangularWeaveBoard(options), { sides: [6, 9], edgeLength: options.tileSize, interiorNeighborsBySides: { 6: 6, 9: 6 } });
+    testTopBottomEdgeTypeCoverage("Triangular Weave", generateTriangularWeaveBoard, [6, 9]);
+    testGenerator("Two-Triangle Weave", () => generateTwoTriangleWeaveBoard(options), { sides: [3, 6], edgeLength: options.tileSize, skipInteriorNeighbors: true });
+    testGenerator("Hex-Parallelogram Weave", () => generateHexParallelogramWeaveBoard(options), { sides: [3, 10, 12], edgeLength: options.tileSize, skipInteriorNeighbors: true });
+    testTopBottomEdgeTypeCoverage("Hex-Parallelogram Weave", generateHexParallelogramWeaveBoard, [3, 10, 12]);
+    testGenerator("Trapezoid-Triangle Weave", () => generateTrapezoidTriangleWeaveBoard(options), { sides: [9, 11], edgeLength: options.tileSize, skipInteriorNeighbors: true });
+    testTrapezoidTriangleUnitsComplete(generateTrapezoidTriangleWeaveBoard, options);
+    testTrapezoidTriangleFlatTopBottom(generateTrapezoidTriangleWeaveBoard, options);
+    testHighRowCoverage("Triangular Weave", generateTriangularWeaveBoard, [6, 9]);
+    testHighRowCoverage("Two-Triangle Weave", generateTwoTriangleWeaveBoard, [3, 6]);
+    testHighRowCoverage("Hex-Parallelogram Weave", generateHexParallelogramWeaveBoard, [3, 10, 12]);
+    testHighRowCoverage("Trapezoid-Triangle Weave", generateTrapezoidTriangleWeaveBoard, [9, 11]);
     testGenerator("Triangle Rect", () => generateTriangleBoard({ ...options, shape: "rectangular" }));
     testGenerator("Triangle Tri", () => generateTriangleBoard({ ...options, shape: "triangular" }));
     testGenerator("Hex Rect", () => generateHexBoard({ ...options, shape: "rectangular" }));
@@ -55,6 +76,131 @@ export function runTilingTests() {
     testGenerator("Tetrakis Square (V4.8.8)", () => generateTetrakisSquareBoard(options));
 
     console.log("Tiling Tests Completed.");
+}
+
+
+function testBasketWeaveBalancedEdges(genFn, options) {
+    const board = genFn(options);
+    const unit = options.tileSize;
+    let hasLeftVertical = false;
+    let hasRightVertical = false;
+    let hasBottomHorizontal = false;
+
+    for (const tile of board.tiles) {
+        const box = tileBoundingBox(tile);
+        const width = box.maxX - box.minX;
+        const height = box.maxY - box.minY;
+        if (box.minX <= unit + 0.001 && Math.abs(width - unit) < 0.001 && Math.abs(height - 3 * unit) < 0.001) {
+            hasLeftVertical = true;
+        }
+        if (box.maxX >= board.width - unit - 0.001 && Math.abs(width - unit) < 0.001 && Math.abs(height - 3 * unit) < 0.001) {
+            hasRightVertical = true;
+        }
+        if (box.maxY >= board.height - unit - 0.001 && Math.abs(width - 3 * unit) < 0.001 && Math.abs(height - unit) < 0.001) {
+            hasBottomHorizontal = true;
+        }
+    }
+
+    if (!hasLeftVertical) {
+        console.error('[FAIL] Basket Weave: missing left-edge vertical 1x3 balance tiles');
+    }
+    if (!hasRightVertical) {
+        console.error('[FAIL] Basket Weave: missing right-edge vertical 1x3 balance tiles');
+    }
+    if (!hasBottomHorizontal) {
+        console.error('[FAIL] Basket Weave: missing bottom-edge horizontal 3x1 balance tiles');
+    }
+}
+
+function testTopBottomEdgeTypeCoverage(name, genFn, expectedSideCounts) {
+    const board = genFn({ cols: 10, rows: 10, tileSize: 20, colorCount: 6, rng: createRNG(9876) });
+    const topCounts = new Set();
+    const bottomCounts = new Set();
+
+    for (const tile of board.tiles) {
+        const [, cy] = centroid(tile.points);
+        if (cy < board.height * 0.2) topCounts.add(tile.points.length);
+        if (cy > board.height * 0.8) bottomCounts.add(tile.points.length);
+    }
+
+    for (const sideCount of expectedSideCounts) {
+        if (!topCounts.has(sideCount)) {
+            console.error(`[FAIL] ${name}: top edge is missing ${sideCount}-sided tiles`);
+        }
+        if (!bottomCounts.has(sideCount)) {
+            console.error(`[FAIL] ${name}: bottom edge is missing ${sideCount}-sided tiles`);
+        }
+    }
+}
+
+function testTrapezoidTriangleUnitsComplete(genFn, options) {
+    const board = genFn(options);
+    for (const tile of board.tiles) {
+        if (!tile.type?.startsWith('triangle')) continue;
+        const trapezoidNeighbors = tile.neighbors.filter(neighborId => board.tiles[neighborId]?.type === 'trapezoid');
+        if (trapezoidNeighbors.length !== 3) {
+            console.error(`[FAIL] Trapezoid-Triangle Weave: triangle tile ${tile.id} has ${trapezoidNeighbors.length} trapezoid neighbors, expected 3`);
+        }
+    }
+}
+
+
+function testTrapezoidTriangleFlatTopBottom(genFn, options) {
+    for (const rows of [5, 6, 7, options.rows]) {
+        const board = genFn({ ...options, rows, rng: createRNG(5000 + rows) });
+        if (!hasHorizontalBoundaryEdge(board, 0)) {
+            console.error(`[FAIL] Trapezoid-Triangle Weave: rows=${rows} has a spiky top edge`);
+        }
+        if (!hasHorizontalBoundaryEdge(board, board.height)) {
+            console.error(`[FAIL] Trapezoid-Triangle Weave: rows=${rows} has a spiky bottom edge`);
+        }
+    }
+}
+
+function hasHorizontalBoundaryEdge(board, y) {
+    for (const tile of board.tiles) {
+        for (let i = 0; i < tile.points.length; i++) {
+            const a = tile.points[i];
+            const b = tile.points[(i + 1) % tile.points.length];
+            if (Math.abs(a[1] - y) < 0.001 && Math.abs(b[1] - y) < 0.001 && Math.abs(a[0] - b[0]) > 0.001) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function tileBoundingBox(tile) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const [x, y] of tile.points) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+    }
+    return { minX, minY, maxX, maxY };
+}
+
+function testHighRowCoverage(name, genFn, expectedBottomLeftSideCounts) {
+    const highRowOptions = { cols: 8, rows: 50, tileSize: 10, colorCount: 6, rng: createRNG(12345) };
+    const board = genFn(highRowOptions);
+    const bottomLeftCounts = new Map();
+
+    for (const tile of board.tiles) {
+        const [cx, cy] = centroid(tile.points);
+        if (cx < board.width * 0.25 && cy > board.height * 0.75) {
+            bottomLeftCounts.set(tile.points.length, (bottomLeftCounts.get(tile.points.length) ?? 0) + 1);
+        }
+    }
+
+    for (const sideCount of expectedBottomLeftSideCounts) {
+        if (!bottomLeftCounts.has(sideCount)) {
+            console.error(`[FAIL] ${name}: high-row bottom-left crop is missing ${sideCount}-sided tiles`);
+        }
+    }
 }
 
 function testGenerator(name, genFn, geometry = null) {
@@ -88,7 +234,7 @@ function testGenerator(name, genFn, geometry = null) {
     }
 }
 
-function validateRegularGeometry(name, board, { sides, edgeLength }) {
+function validateRegularGeometry(name, board, { sides, edgeLength, interiorNeighborsBySides = null, skipInteriorNeighbors = false }) {
     const sideSet = new Set(sides);
     const margin = Math.min(edgeLength * 5, Math.min(board.width, board.height) / 3);
     let interiorCount = 0;
@@ -108,8 +254,11 @@ function validateRegularGeometry(name, board, { sides, edgeLength }) {
         const [cx, cy] = centroid(tile.points);
         if (cx > margin && cy > margin && cx < board.width - margin && cy < board.height - margin) {
             interiorCount++;
-            if (tile.neighbors.length !== tile.points.length) {
-                console.error(`[FAIL] ${name}: Interior tile ${tile.id} has ${tile.neighbors.length} neighbors, expected ${tile.points.length}`);
+            if (!skipInteriorNeighbors) {
+                const expectedNeighbors = interiorNeighborsBySides?.[tile.points.length] ?? tile.points.length;
+                if (tile.neighbors.length !== expectedNeighbors) {
+                    console.error(`[FAIL] ${name}: Interior tile ${tile.id} has ${tile.neighbors.length} neighbors, expected ${expectedNeighbors}`);
+                }
             }
         }
     }

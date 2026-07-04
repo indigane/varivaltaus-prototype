@@ -1,6 +1,12 @@
 import { createRNG } from './core/rng.js';
 import { generateSquareBoard } from './tilings/square.js';
 import { generateBrickBoard } from './tilings/brick.js';
+import { generateBasketWeaveBoard } from './tilings/basket-weave.js';
+import { generateWaffleBoard } from './tilings/waffle.js';
+import { generateTriangularWeaveBoard } from './tilings/triangular-weave.js';
+import { generateTwoTriangleWeaveBoard } from './tilings/two-triangle-weave.js';
+import { generateHexParallelogramWeaveBoard } from './tilings/hex-parallelogram-weave.js';
+import { generateTrapezoidTriangleWeaveBoard } from './tilings/trapezoid-triangle-weave.js';
 import { generateTriangleBoard } from './tilings/triangle.js';
 import { generateHexBoard } from './tilings/hex.js';
 import { generateTrihexagonalBoard } from './tilings/trihexagonal.js';
@@ -142,6 +148,18 @@ function handleStart() {
         board = generateSquareBoard({ ...commonOptions, cols, rows, tileSize });
     } else if (boardType === 'brick') {
         board = generateBrickBoard({ ...commonOptions, cols, rows, tileSize });
+    } else if (boardType === 'basket-weave') {
+        board = generateBasketWeaveBoard({ ...commonOptions, cols, rows, tileSize });
+    } else if (boardType === 'waffle') {
+        board = generateWaffleBoard({ ...commonOptions, cols, rows, tileSize });
+    } else if (boardType === 'triangular-weave') {
+        board = generateTriangularWeaveBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.1 });
+    } else if (boardType === 'two-triangle-weave') {
+        board = generateTwoTriangleWeaveBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 1.0 });
+    } else if (boardType === 'hex-parallelogram-weave') {
+        board = generateHexParallelogramWeaveBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.9 });
+    } else if (boardType === 'trapezoid-triangle-weave') {
+        board = generateTrapezoidTriangleWeaveBoard({ ...commonOptions, cols, rows, tileSize: tileSize * 0.9 });
     } else if (boardType === 'triangle') {
         const adjCols = boardShape === 'triangular' ? cols : Math.floor(cols * 1.5);
         board = generateTriangleBoard({ ...commonOptions, cols: adjCols, rows, tileSize: tileSize * 1.2, shape: boardShape === 'triangular' ? 'triangular' : 'rectangular' });
