@@ -17,7 +17,7 @@ import (
 func main() {
 	mode := flag.String("mode", "sim", "Mode: sim, fairness, or search")
 	gameCount := flag.Int("games", 100, "Number of games (or batches) to simulate")
-	boardTypeFlag := flag.String("board", "square", "Board type (square, triangle, hex, rhombitrihexagonal, pythagorean, pentagon-cairo, pentagon-prismatic, pentagon-floret, deltoidal-trihexagonal, rhombille, triakis-triangular, kisrhombille, tetrakis-square, voronoi-jittered, voronoi-random)")
+	boardTypeFlag := flag.String("board", "square", "Board type (square, brick, basket-weave, waffle, triangular-weave, two-triangle-weave, hex-parallelogram-weave, trapezoid-triangle-weave, triangle, hex, rhombitrihexagonal, pythagorean, pentagon-cairo, pentagon-prismatic, pentagon-floret, deltoidal-trihexagonal, rhombille, triakis-triangular, kisrhombille, tetrakis-square, voronoi-jittered, voronoi-random)")
 	colsFlag := flag.Int("cols", 20, "Number of columns")
 	rowsFlag := flag.Int("rows", 20, "Number of rows")
 	colorCountFlag := flag.Int("colors", 6, "Number of colors")
@@ -182,21 +182,22 @@ type maskAdjustment struct {
 }
 
 var maskAdjustments = map[string]map[string]maskAdjustment{
-// Example:
-// "triakis-triangular": {
-//     "triangular": {dy: 0, scale: 1.0, rotation: 0},
-// },
+	// Example:
+	//
+	//	"triakis-triangular": {
+	//	    "triangular": {dy: 0, scale: 1.0, rotation: 0},
+	//	},
 }
 
 type gameResult struct {
-	winner           int
-	winningTeam      int
-	turns            int
-	dominance        float64
-	tileCount        int
-	leadChanges      int
-	pointOfNoReturn  int
-	maxLead          float64
+	winner          int
+	winningTeam     int
+	turns           int
+	dominance       float64
+	tileCount       int
+	leadChanges     int
+	pointOfNoReturn int
+	maxLead         float64
 }
 
 func applyConfigMask(board core.Board, boardType string, maskType string, size int) core.Board {
@@ -442,10 +443,18 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 	minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
 	for _, t := range board.Tiles {
 		for _, p := range t.Points {
-			if p[0] < minX { minX = p[0] }
-			if p[0] > maxX { maxX = p[0] }
-			if p[1] < minY { minY = p[1] }
-			if p[1] > maxY { maxY = p[1] }
+			if p[0] < minX {
+				minX = p[0]
+			}
+			if p[0] > maxX {
+				maxX = p[0]
+			}
+			if p[1] < minY {
+				minY = p[1]
+			}
+			if p[1] > maxY {
+				maxY = p[1]
+			}
 		}
 	}
 
@@ -501,10 +510,14 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 
 		maxD := 0
 		for _, d := range distances {
-			if d > maxD { maxD = d }
+			if d > maxD {
+				maxD = d
+			}
 		}
 		targetD := maxD / 4
-		if targetD < 2 { targetD = 2 }
+		if targetD < 2 {
+			targetD = 2
+		}
 
 		var candidates []int
 		for id, d := range distances {
@@ -520,14 +533,21 @@ func findStartTilesByPosition(board *core.Board, playerCount int, pos string) []
 				for _, c := range candidates {
 					alreadySelected := false
 					for _, s := range selected {
-						if s == c { alreadySelected = true; break }
+						if s == c {
+							alreadySelected = true
+							break
+						}
 					}
-					if alreadySelected { continue }
+					if alreadySelected {
+						continue
+					}
 
 					minD := 1000000
 					for _, s := range selected {
 						d := distBetweenTiles(board, c, s)
-						if d < minD { minD = d }
+						if d < minD {
+							minD = d
+						}
 					}
 					if minD > maxMinD {
 						maxMinD = minD
@@ -702,6 +722,18 @@ func generateBaseBoard(boardType string, opts tilings.Options) core.Board {
 		return tilings.GenerateSquareBoard(opts)
 	case "brick":
 		return tilings.GenerateBrickBoard(opts)
+	case "basket-weave":
+		return tilings.GenerateBasketWeaveBoard(opts)
+	case "waffle":
+		return tilings.GenerateWaffleBoard(opts)
+	case "triangular-weave":
+		return tilings.GenerateTriangularWeaveBoard(opts)
+	case "two-triangle-weave":
+		return tilings.GenerateTwoTriangleWeaveBoard(opts)
+	case "hex-parallelogram-weave":
+		return tilings.GenerateHexParallelogramWeaveBoard(opts)
+	case "trapezoid-triangle-weave":
+		return tilings.GenerateTrapezoidTriangleWeaveBoard(opts)
 	case "triangle":
 		return tilings.GenerateTriangleBoard(opts)
 	case "hex":
@@ -812,8 +844,12 @@ func runFairnessSearch(batchCount int, cfg studyConfig) {
 				for j := 0; j < playerCount; j++ {
 					wr := float64(positionWins[j]) / float64(totalGames)
 					winRates[j] = wr
-					if wr < minWR { minWR = wr }
-					if wr > maxWR { maxWR = wr }
+					if wr < minWR {
+						minWR = wr
+					}
+					if wr > maxWR {
+						maxWR = wr
+					}
 				}
 
 				fairness := maxWR - minWR
@@ -850,10 +886,18 @@ func findCandidateTiles(board *core.Board) []int {
 	minX, maxX, minY, maxY := math.MaxFloat64, -math.MaxFloat64, math.MaxFloat64, -math.MaxFloat64
 	for _, t := range board.Tiles {
 		for _, p := range t.Points {
-			if p[0] < minX { minX = p[0] }
-			if p[0] > maxX { maxX = p[0] }
-			if p[1] < minY { minY = p[1] }
-			if p[1] > maxY { maxY = p[1] }
+			if p[0] < minX {
+				minX = p[0]
+			}
+			if p[0] > maxX {
+				maxX = p[0]
+			}
+			if p[1] < minY {
+				minY = p[1]
+			}
+			if p[1] > maxY {
+				maxY = p[1]
+			}
 		}
 	}
 
