@@ -14,163 +14,236 @@
             <p class="game-subtitle">a.k.a. Flood</p>
         </div>
 
-        <div id="setup-panel" class="setup-card">
-            <div class="setup-section">
-                <div class="section-heading">
-                    <span class="section-icon">◆</span> Board
-                </div>
-                <div class="setup-grid">
-                    <div class="setup-group">
-                        <label for="board-type">Tiling</label>
-                        <select id="board-type">
-                            <option value="square">Square</option>
-                            <option value="brick">Brick</option>
-                            <option value="triangle">Triangle</option>
-                            <option value="hex">Hex</option>
-                            <option value="trihexagonal">Trihexagonal</option>
-                            <option value="truncated-hexagonal">Truncated Hexagonal</option>
-                            <option value="truncated-trihexagonal">Truncated Trihexagonal</option>
-                            <option value="snub-square">Snub Square</option>
-                            <option value="snub-trihexagonal">Snub Trihexagonal</option>
-                            <option value="elongated-triangular">Elongated Triangular</option>
-                            <option value="rhombitrihexagonal">Rhombitrihex</option>
-                            <option value="pentagon-cairo">Cairo Pentagon</option>
-                            <option value="pentagon-prismatic">Prismatic Pentagon</option>
-                            <option value="pentagon-floret">Floret Pentagon</option>
-                            <option value="deltoidal-trihexagonal">Deltoidal Trihexagonal</option>
-                            <option value="rhombille">Rhombille</option>
-                            <option value="triakis-triangular">Triakis Triangular</option>
-                            <option value="kisrhombille">Kisrhombille</option>
-                            <option value="tetrakis-square">Tetrakis Square</option>
-                            <option value="4.8.8">Octagon & Square</option>
-                            <option value="pythagorean">Pythagorean</option>
-                            <option value="basket-weave">Basket Weave</option>
-                            <option value="waffle">Waffle</option>
-                            <option value="triangular-weave">Triangular Weave</option>
-                            <option value="two-triangle-weave">Two-Triangle Weave</option>
-                            <option value="hex-parallelogram-weave">Hex-Parallelogram Weave</option>
-                            <option value="trapezoid-triangle-weave">Trapezoid-Triangle Weave</option>
-                            <option value="voronoi-jittered">Voronoi (Jittered)</option>
-                            <option value="voronoi-random">Voronoi (Random)</option>
-                        </select>
-                    </div>
-                    <div class="setup-group">
-                        <label for="board-shape">Shape</label>
-                        <select id="board-shape">
-                            <option value="rectangular">Rectangular</option>
-                            <option value="triangular">Triangular</option>
-                            <option value="hexagonal">Hexagonal</option>
-                            <option value="circular">Circular</option>
-                            <option value="ellipse-v">Ellipse (V)</option>
-                            <option value="ellipse-h">Ellipse (H)</option>
-                            <option value="gemstone">Gemstone</option>
-                            <option value="donut">Donut</option>
-                            <option value="hourglass-v">Hourglass (V)</option>
-                            <option value="hourglass-h">Hourglass (H)</option>
-                            <option value="plus">Plus-sign</option>
-                        </select>
-                    </div>
-                    <div class="setup-group" id="cols-group">
-                        <label>Columns <output id="board-cols-val">20</output></label>
-                        <input type="range" id="board-cols" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-cols-val').textContent=this.value">
-                    </div>
-                    <div class="setup-group" id="rows-group">
-                        <label>Rows <output id="board-rows-val">20</output></label>
-                        <input type="range" id="board-rows" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-rows-val').textContent=this.value">
-                    </div>
-                    <div class="setup-group" id="size-group" style="display:none;">
-                        <label>Size <output id="board-size-val">25</output></label>
-                        <input type="range" id="board-size" value="25" min="10" max="80" step="1" oninput="document.getElementById('board-size-val').textContent=this.value">
-                    </div>
-                    <div class="setup-group">
-                        <label>Colors <output id="color-count-val">6</output></label>
-                        <input type="range" id="color-count" value="6" min="3" max="12" step="1" oninput="document.getElementById('color-count-val').textContent=this.value">
-                    </div>
-                    <div class="setup-group">
-                        <label for="palette">Palette</label>
-                        <select id="palette"></select>
-                    </div>
-                </div>
-                <div class="tile-style-group">
-                    <label>Tile Style</label>
-                    <div class="tile-style-selector" id="tile-style-selector">
-                        <button type="button" class="ts-btn active" data-style="flat">
-                            <span class="ts-preview ts-flat"><span></span><span></span><span></span></span>
-                            Flat
-                        </button>
-                        <button type="button" class="ts-btn" data-style="embossed">
-                            <span class="ts-preview ts-embossed"><span></span><span></span><span></span></span>
-                            Embossed
-                        </button>
-                        <button type="button" class="ts-btn" data-style="rounded">
-                            <span class="ts-preview ts-rounded"><span></span><span></span><span></span></span>
-                            Rounded
-                        </button>
-                    </div>
-                    <input type="hidden" id="tile-style" value="flat">
-                    <div class="tile-style-options" id="emboss-options" hidden>
-                        <label>Emboss Size <output id="emboss-size-val">1.5</output></label>
-                        <input type="range" id="emboss-size" min="0.5" max="4" step="0.5" value="1.5" oninput="document.getElementById('emboss-size-val').value=this.value">
-                        <label>Emboss Strength <output id="emboss-opacity-val">50</output>%</label>
-                        <input type="range" id="emboss-opacity" min="10" max="100" step="5" value="50" oninput="document.getElementById('emboss-opacity-val').value=this.value">
-                    </div>
-                    <div class="tile-style-options" id="gutter-options" hidden>
-                        <label>Gutter Size <output id="gutter-size-val">4</output>%</label>
-                        <input type="range" id="gutter-size" min="0" max="15" step="1" value="4" oninput="document.getElementById('gutter-size-val').value=this.value">
-                    </div>
-                </div>
-            </div>
+        <div id="setup-panel" class="setup-card quick-card">
 
-            <div class="setup-section">
-                <div class="section-heading">
-                    <span class="section-icon">⚙</span> Rules
+            <!-- ---------- Quick setup ---------- -->
+            <div id="quick-setup">
+                <div class="setup-section">
+                    <div class="section-heading">
+                        <span class="section-icon">◆</span> Pick a game
+                        <span id="preset-status" class="preset-status" hidden>Custom</span>
+                    </div>
+                    <div id="preset-grid" class="preset-grid"></div>
                 </div>
-                <div class="setup-grid">
-                    <div class="setup-group">
-                        <label for="color-restrictions">Restrictions</label>
-                        <select id="color-restrictions">
-                            <option value="notOwnColor">Not Own Color</option>
-                            <option value="notAnyPlayerColor" selected>Not Any Player Color</option>
-                            <option value="notAdjacentEnemyColor">Not Adjacent Enemy</option>
-                        </select>
-                    </div>
-                    <div class="setup-group">
-                        <label for="turn-order">Turn Order</label>
-                        <select id="turn-order">
-                            <option value="players">Standard</option>
-                            <option value="snake">Snake</option>
-                        </select>
-                    </div>
 
-                    <div class="setup-group">
-                        <label>Starting Area <output id="starting-area-size-val">1</output></label>
-                        <input type="range" id="starting-area-size" value="1" min="1" max="10" step="1" oninput="document.getElementById('starting-area-size-val').textContent=this.value">
+                <div class="setup-section">
+                    <div class="section-heading"><span class="section-icon">◆</span> Players</div>
+                    <div class="quick-row">
+                        <div class="stepper" data-knob="humans">
+                            <span class="stepper-label">Humans</span>
+                            <button type="button" class="stepper-btn" data-dir="-1" aria-label="Fewer humans">−</button>
+                            <output class="stepper-val">1</output>
+                            <button type="button" class="stepper-btn" data-dir="1" aria-label="More humans">+</button>
+                        </div>
+                        <div class="stepper" data-knob="bots">
+                            <span class="stepper-label">Bots</span>
+                            <button type="button" class="stepper-btn" data-dir="-1" aria-label="Fewer bots">−</button>
+                            <output class="stepper-val">1</output>
+                            <button type="button" class="stepper-btn" data-dir="1" aria-label="More bots">+</button>
+                        </div>
                     </div>
-                    <div class="setup-group setup-group-checks">
-                        <label class="check-label"><input type="checkbox" id="starting-area-buffer" checked> Starting buffer</label>
-                        <label class="check-label"><input type="checkbox" id="allow-same-starting-color"> Allow same start color</label>
+                    <div class="quick-row">
+                        <div class="seg" data-knob="difficulty" role="radiogroup" aria-label="Bot difficulty">
+                            <span class="seg-label">Bot skill</span>
+                            <button type="button" class="seg-btn" data-value="easy">Easy</button>
+                            <button type="button" class="seg-btn" data-value="normal">Normal</button>
+                            <button type="button" class="seg-btn" data-value="hard">Hard</button>
+                        </div>
+                        <label class="chip-toggle" id="teams-chip" hidden>
+                            <input type="checkbox" id="quick-teams"> Play as 2 teams
+                        </label>
                     </div>
                 </div>
-            </div>
 
-            <div class="setup-section">
-                <div class="section-heading">
-                    <span class="section-icon">👤</span> Players
+                <div class="setup-section">
+                    <div class="section-heading"><span class="section-icon">◆</span> Game length</div>
+                    <div class="seg seg-wide" data-knob="length" role="radiogroup" aria-label="Game length">
+                        <button type="button" class="seg-btn" data-value="quick"><b>Quick</b><small>small board · 5 colors</small></button>
+                        <button type="button" class="seg-btn" data-value="normal"><b>Normal</b><small>medium board · 6 colors</small></button>
+                        <button type="button" class="seg-btn" data-value="long"><b>Long</b><small>big board · 8 colors</small></button>
+                    </div>
                 </div>
-                <div id="player-setup-list"></div>
-                <button id="add-player-button" class="btn-ghost">+ Add Player</button>
 
-                <div class="teams-toggle-row">
-                    <label class="check-label"><input type="checkbox" id="enable-teams"> Enable Teams</label>
-                    <select id="team-territory" class="team-territory-select" style="display:none;">
-                        <option value="separatePlayers">Separate territory</option>
-                        <option value="merged">Merged territory</option>
-                    </select>
+                <div class="setup-section">
+                    <div class="section-heading"><span class="section-icon">◆</span> Board</div>
+                    <div class="seg seg-wide" data-knob="board" role="radiogroup" aria-label="Board type">
+                        <button type="button" class="seg-btn" data-value="classic"><b>Classic</b><small>square grid</small></button>
+                        <button type="button" class="seg-btn" data-value="hex"><b>Hex</b><small>fair &amp; flowing</small></button>
+                        <button type="button" class="seg-btn" data-value="organic"><b>Organic</b><small>irregular cells</small></button>
+                        <button type="button" class="seg-btn" data-value="exotic"><b>Exotic</b><small>surprise tiling</small></button>
+                    </div>
                 </div>
-                <div id="team-assign-panel" style="display:none;"></div>
+
+                <p id="setup-summary" class="setup-summary"></p>
             </div>
 
             <button id="start-button">START GAME</button>
+
+            <!-- ---------- Advanced (full control set; IDs consumed by js/main.js) ---------- -->
+            <details id="advanced-panel" class="advanced-panel">
+                <summary>
+                    <span class="adv-title">Advanced settings</span>
+                    <span class="adv-hint">tilings, shapes, rules, bot types, appearance</span>
+                </summary>
+                <div class="advanced-body">
+
+                <div class="setup-section">
+                    <div class="section-heading"><span class="section-icon">◆</span> Board</div>
+                    <div class="setup-grid">
+                        <div class="setup-group">
+                            <label for="board-type">Tiling</label>
+                            <select id="board-type">
+                                <option value="square">Square</option>
+                                <option value="brick">Brick</option>
+                                <option value="triangle">Triangle</option>
+                                <option value="hex">Hex</option>
+                                <option value="trihexagonal">Trihexagonal</option>
+                                <option value="truncated-hexagonal">Truncated Hexagonal</option>
+                                <option value="truncated-trihexagonal">Truncated Trihexagonal</option>
+                                <option value="snub-square">Snub Square</option>
+                                <option value="snub-trihexagonal">Snub Trihexagonal</option>
+                                <option value="elongated-triangular">Elongated Triangular</option>
+                                <option value="rhombitrihexagonal">Rhombitrihex</option>
+                                <option value="pentagon-cairo">Cairo Pentagon</option>
+                                <option value="pentagon-prismatic">Prismatic Pentagon</option>
+                                <option value="pentagon-floret">Floret Pentagon</option>
+                                <option value="deltoidal-trihexagonal">Deltoidal Trihexagonal</option>
+                                <option value="rhombille">Rhombille</option>
+                                <option value="triakis-triangular">Triakis Triangular</option>
+                                <option value="kisrhombille">Kisrhombille</option>
+                                <option value="tetrakis-square">Tetrakis Square</option>
+                                <option value="4.8.8">Octagon & Square</option>
+                                <option value="pythagorean">Pythagorean</option>
+                                <option value="basket-weave">Basket Weave</option>
+                                <option value="waffle">Waffle</option>
+                                <option value="triangular-weave">Triangular Weave</option>
+                                <option value="two-triangle-weave">Two-Triangle Weave</option>
+                                <option value="hex-parallelogram-weave">Hex-Parallelogram Weave</option>
+                                <option value="trapezoid-triangle-weave">Trapezoid-Triangle Weave</option>
+                                <option value="voronoi-jittered">Voronoi (Jittered)</option>
+                                <option value="voronoi-random">Voronoi (Random)</option>
+                            </select>
+                        </div>
+                        <div class="setup-group">
+                            <label for="board-shape">Shape</label>
+                            <select id="board-shape">
+                                <option value="rectangular">Rectangular</option>
+                                <option value="triangular">Triangular</option>
+                                <option value="hexagonal">Hexagonal</option>
+                                <option value="circular">Circular</option>
+                                <option value="ellipse-v">Ellipse (V)</option>
+                                <option value="ellipse-h">Ellipse (H)</option>
+                                <option value="gemstone">Gemstone</option>
+                                <option value="donut">Donut</option>
+                                <option value="hourglass-v">Hourglass (V)</option>
+                                <option value="hourglass-h">Hourglass (H)</option>
+                                <option value="plus">Plus-sign</option>
+                            </select>
+                        </div>
+                        <div class="setup-group" id="cols-group">
+                            <label>Columns <output id="board-cols-val">20</output></label>
+                            <input type="range" id="board-cols" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-cols-val').textContent=this.value">
+                        </div>
+                        <div class="setup-group" id="rows-group">
+                            <label>Rows <output id="board-rows-val">20</output></label>
+                            <input type="range" id="board-rows" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-rows-val').textContent=this.value">
+                        </div>
+                        <div class="setup-group" id="size-group" style="display:none;">
+                            <label>Size <output id="board-size-val">25</output></label>
+                            <input type="range" id="board-size" value="25" min="10" max="80" step="1" oninput="document.getElementById('board-size-val').textContent=this.value">
+                        </div>
+                        <div class="setup-group">
+                            <label>Colors <output id="color-count-val">6</output></label>
+                            <input type="range" id="color-count" value="6" min="3" max="12" step="1" oninput="document.getElementById('color-count-val').textContent=this.value">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-section">
+                    <div class="section-heading"><span class="section-icon">◆</span> Rules</div>
+                    <div class="setup-grid">
+                        <div class="setup-group">
+                            <label for="color-restrictions">Restrictions</label>
+                            <select id="color-restrictions">
+                                <option value="notOwnColor">Not Own Color</option>
+                                <option value="notAnyPlayerColor" selected>Not Any Player Color</option>
+                                <option value="notAdjacentEnemyColor">Not Adjacent Enemy</option>
+                            </select>
+                        </div>
+                        <div class="setup-group">
+                            <label for="turn-order">Turn Order</label>
+                            <select id="turn-order">
+                                <option value="players">Standard</option>
+                                <option value="snake">Snake</option>
+                            </select>
+                        </div>
+                        <div class="setup-group">
+                            <label>Starting Area <output id="starting-area-size-val">3</output></label>
+                            <input type="range" id="starting-area-size" value="3" min="1" max="10" step="1" oninput="document.getElementById('starting-area-size-val').textContent=this.value">
+                        </div>
+                        <div class="setup-group setup-group-checks">
+                            <label class="check-label"><input type="checkbox" id="starting-area-buffer" checked> Starting buffer</label>
+                            <label class="check-label"><input type="checkbox" id="allow-same-starting-color"> Allow same start color</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-section">
+                    <div class="section-heading"><span class="section-icon">👤</span> Players</div>
+                    <div id="player-setup-list"></div>
+                    <button id="add-player-button" class="btn-ghost">+ Add Player</button>
+
+                    <div class="teams-toggle-row">
+                        <label class="check-label"><input type="checkbox" id="enable-teams"> Enable Teams</label>
+                        <select id="team-territory" class="team-territory-select" style="display:none;">
+                            <option value="separatePlayers">Separate territory</option>
+                            <option value="merged">Merged territory</option>
+                        </select>
+                    </div>
+                    <div id="team-assign-panel" style="display:none;"></div>
+                </div>
+
+                <div class="setup-section">
+                    <div class="section-heading"><span class="section-icon">◆</span> Appearance</div>
+                    <div class="setup-grid">
+                        <div class="setup-group">
+                            <label for="palette">Palette</label>
+                            <select id="palette"></select>
+                        </div>
+                    </div>
+                    <div class="tile-style-group">
+                        <label>Tile Style</label>
+                        <div class="tile-style-selector" id="tile-style-selector">
+                            <button type="button" class="ts-btn active" data-style="flat">
+                                <span class="ts-preview ts-flat"><span></span><span></span><span></span></span>
+                                Flat
+                            </button>
+                            <button type="button" class="ts-btn" data-style="embossed">
+                                <span class="ts-preview ts-embossed"><span></span><span></span><span></span></span>
+                                Embossed
+                            </button>
+                            <button type="button" class="ts-btn" data-style="rounded">
+                                <span class="ts-preview ts-rounded"><span></span><span></span><span></span></span>
+                                Rounded
+                            </button>
+                        </div>
+                        <input type="hidden" id="tile-style" value="flat">
+                        <div class="tile-style-options" id="emboss-options" hidden>
+                            <label>Emboss Size <output id="emboss-size-val">1.5</output></label>
+                            <input type="range" id="emboss-size" min="0.5" max="4" step="0.5" value="1.5" oninput="document.getElementById('emboss-size-val').value=this.value">
+                            <label>Emboss Strength <output id="emboss-opacity-val">50</output>%</label>
+                            <input type="range" id="emboss-opacity" min="10" max="100" step="5" value="50" oninput="document.getElementById('emboss-opacity-val').value=this.value">
+                        </div>
+                        <div class="tile-style-options" id="gutter-options" hidden>
+                            <label>Gutter Size <output id="gutter-size-val">4</output>%</label>
+                            <input type="range" id="gutter-size" min="0" max="15" step="1" value="4" oninput="document.getElementById('gutter-size-val').value=this.value">
+                        </div>
+                    </div>
+                </div>
+
+                <p class="setup-switch"><a href="advanced.html">Open the full settings page →</a></p>
+                </div>
+            </details>
         </div>
     </div>
 

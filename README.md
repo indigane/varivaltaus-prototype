@@ -18,12 +18,13 @@ Värivaltaus (Finnish for "Color Capture") is a flood-fill strategy game where p
 
 ## Project Structure
 
-- `index.html`: The main entry point for the web-based game.
+- `index.html`: The main entry point — preset-based quick setup with an "Advanced settings" panel.
+- `advanced.html`: The original full-control setup screen (all settings exposed directly).
 - `js/`: Contains the JavaScript implementation of the game engine, bots, and UI.
   - `core/`: Core game logic and state management.
   - `bots/`: Bot strategy implementations.
   - `tilings/`: Board generation and tiling logic.
-  - `ui/`: Canvas rendering and UI handling.
+  - `ui/`: Canvas rendering and UI handling (`quick-setup.js` drives the preset layer; see `docs/ui/quick-setup.md`).
 - `go-flood/`: A high-performance Go port of the game engine, optimized for CLI simulations and research.
 - `research/`: Documentation and results from bot comparison studies.
 - `tests.html`: A web-based test runner for the JavaScript game logic.

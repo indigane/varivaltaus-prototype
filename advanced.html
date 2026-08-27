@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Flood — Advanced Setup</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ==================== SETUP SCREEN ==================== -->
+    <div id="setup-screen">
+        <div class="setup-header">
+            <h1 class="game-title">Värivaltaus</h1>
+            <p class="game-subtitle">a.k.a. Flood</p>
+            <p class="setup-switch"><a href="index.html">← Simple setup</a></p>
+        </div>
+
+        <div id="setup-panel" class="setup-card">
+            <div class="setup-section">
+                <div class="section-heading">
+                    <span class="section-icon">◆</span> Board
+                </div>
+                <div class="setup-grid">
+                    <div class="setup-group">
+                        <label for="board-type">Tiling</label>
+                        <select id="board-type">
+                            <option value="square">Square</option>
+                            <option value="brick">Brick</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="hex">Hex</option>
+                            <option value="trihexagonal">Trihexagonal</option>
+                            <option value="truncated-hexagonal">Truncated Hexagonal</option>
+                            <option value="truncated-trihexagonal">Truncated Trihexagonal</option>
+                            <option value="snub-square">Snub Square</option>
+                            <option value="snub-trihexagonal">Snub Trihexagonal</option>
+                            <option value="elongated-triangular">Elongated Triangular</option>
+                            <option value="rhombitrihexagonal">Rhombitrihex</option>
+                            <option value="pentagon-cairo">Cairo Pentagon</option>
+                            <option value="pentagon-prismatic">Prismatic Pentagon</option>
+                            <option value="pentagon-floret">Floret Pentagon</option>
+                            <option value="deltoidal-trihexagonal">Deltoidal Trihexagonal</option>
+                            <option value="rhombille">Rhombille</option>
+                            <option value="triakis-triangular">Triakis Triangular</option>
+                            <option value="kisrhombille">Kisrhombille</option>
+                            <option value="tetrakis-square">Tetrakis Square</option>
+                            <option value="4.8.8">Octagon & Square</option>
+                            <option value="pythagorean">Pythagorean</option>
+                            <option value="basket-weave">Basket Weave</option>
+                            <option value="waffle">Waffle</option>
+                            <option value="triangular-weave">Triangular Weave</option>
+                            <option value="two-triangle-weave">Two-Triangle Weave</option>
+                            <option value="hex-parallelogram-weave">Hex-Parallelogram Weave</option>
+                            <option value="trapezoid-triangle-weave">Trapezoid-Triangle Weave</option>
+                            <option value="voronoi-jittered">Voronoi (Jittered)</option>
+                            <option value="voronoi-random">Voronoi (Random)</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
+                        <label for="board-shape">Shape</label>
+                        <select id="board-shape">
+                            <option value="rectangular">Rectangular</option>
+                            <option value="triangular">Triangular</option>
+                            <option value="hexagonal">Hexagonal</option>
+                            <option value="circular">Circular</option>
+                            <option value="ellipse-v">Ellipse (V)</option>
+                            <option value="ellipse-h">Ellipse (H)</option>
+                            <option value="gemstone">Gemstone</option>
+                            <option value="donut">Donut</option>
+                            <option value="hourglass-v">Hourglass (V)</option>
+                            <option value="hourglass-h">Hourglass (H)</option>
+                            <option value="plus">Plus-sign</option>
+                        </select>
+                    </div>
+                    <div class="setup-group" id="cols-group">
+                        <label>Columns <output id="board-cols-val">20</output></label>
+                        <input type="range" id="board-cols" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-cols-val').textContent=this.value">
+                    </div>
+                    <div class="setup-group" id="rows-group">
+                        <label>Rows <output id="board-rows-val">20</output></label>
+                        <input type="range" id="board-rows" value="20" min="5" max="60" step="1" oninput="document.getElementById('board-rows-val').textContent=this.value">
+                    </div>
+                    <div class="setup-group" id="size-group" style="display:none;">
+                        <label>Size <output id="board-size-val">25</output></label>
+                        <input type="range" id="board-size" value="25" min="10" max="80" step="1" oninput="document.getElementById('board-size-val').textContent=this.value">
+                    </div>
+                    <div class="setup-group">
+                        <label>Colors <output id="color-count-val">6</output></label>
+                        <input type="range" id="color-count" value="6" min="3" max="12" step="1" oninput="document.getElementById('color-count-val').textContent=this.value">
+                    </div>
+                    <div class="setup-group">
+                        <label for="palette">Palette</label>
+                        <select id="palette"></select>
+                    </div>
+                </div>
+                <div class="tile-style-group">
+                    <label>Tile Style</label>
+                    <div class="tile-style-selector" id="tile-style-selector">
+                        <button type="button" class="ts-btn active" data-style="flat">
+                            <span class="ts-preview ts-flat"><span></span><span></span><span></span></span>
+                            Flat
+                        </button>
+                        <button type="button" class="ts-btn" data-style="embossed">
+                            <span class="ts-preview ts-embossed"><span></span><span></span><span></span></span>
+                            Embossed
+                        </button>
+                        <button type="button" class="ts-btn" data-style="rounded">
+                            <span class="ts-preview ts-rounded"><span></span><span></span><span></span></span>
+                            Rounded
+                        </button>
+                    </div>
+                    <input type="hidden" id="tile-style" value="flat">
+                    <div class="tile-style-options" id="emboss-options" hidden>
+                        <label>Emboss Size <output id="emboss-size-val">1.5</output></label>
+                        <input type="range" id="emboss-size" min="0.5" max="4" step="0.5" value="1.5" oninput="document.getElementById('emboss-size-val').value=this.value">
+                        <label>Emboss Strength <output id="emboss-opacity-val">50</output>%</label>
+                        <input type="range" id="emboss-opacity" min="10" max="100" step="5" value="50" oninput="document.getElementById('emboss-opacity-val').value=this.value">
+                    </div>
+                    <div class="tile-style-options" id="gutter-options" hidden>
+                        <label>Gutter Size <output id="gutter-size-val">4</output>%</label>
+                        <input type="range" id="gutter-size" min="0" max="15" step="1" value="4" oninput="document.getElementById('gutter-size-val').value=this.value">
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <div class="section-heading">
+                    <span class="section-icon">⚙</span> Rules
+                </div>
+                <div class="setup-grid">
+                    <div class="setup-group">
+                        <label for="color-restrictions">Restrictions</label>
+                        <select id="color-restrictions">
+                            <option value="notOwnColor">Not Own Color</option>
+                            <option value="notAnyPlayerColor" selected>Not Any Player Color</option>
+                            <option value="notAdjacentEnemyColor">Not Adjacent Enemy</option>
+                        </select>
+                    </div>
+                    <div class="setup-group">
+                        <label for="turn-order">Turn Order</label>
+                        <select id="turn-order">
+                            <option value="players">Standard</option>
+                            <option value="snake">Snake</option>
+                        </select>
+                    </div>
+
+                    <div class="setup-group">
+                        <label>Starting Area <output id="starting-area-size-val">3</output></label>
+                        <input type="range" id="starting-area-size" value="3" min="1" max="10" step="1" oninput="document.getElementById('starting-area-size-val').textContent=this.value">
+                    </div>
+                    <div class="setup-group setup-group-checks">
+                        <label class="check-label"><input type="checkbox" id="starting-area-buffer" checked> Starting buffer</label>
+                        <label class="check-label"><input type="checkbox" id="allow-same-starting-color"> Allow same start color</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <div class="section-heading">
+                    <span class="section-icon">👤</span> Players
+                </div>
+                <div id="player-setup-list"></div>
+                <button id="add-player-button" class="btn-ghost">+ Add Player</button>
+
+                <div class="teams-toggle-row">
+                    <label class="check-label"><input type="checkbox" id="enable-teams"> Enable Teams</label>
+                    <select id="team-territory" class="team-territory-select" style="display:none;">
+                        <option value="separatePlayers">Separate territory</option>
+                        <option value="merged">Merged territory</option>
+                    </select>
+                </div>
+                <div id="team-assign-panel" style="display:none;"></div>
+            </div>
+
+            <button id="start-button">START GAME</button>
+        </div>
+    </div>
+
+    <!-- ==================== GAME SCREEN ==================== -->
+    <div id="game-screen" hidden>
+        <div id="game-top-bar">
+            <div id="scoreboard"></div>
+            <div id="turn-counter">
+                <span class="turn-label">Turn</span>
+                <span id="turn-count">0</span>
+            </div>
+        </div>
+
+        <div id="player-strip-top" class="player-strip strip-h" hidden></div>
+
+        <div id="game-middle">
+            <div id="player-strip-left" class="player-strip strip-v" hidden></div>
+            <div id="canvas-area">
+                <canvas id="game-canvas"></canvas>
+            </div>
+            <div id="player-strip-right" class="player-strip strip-v" hidden></div>
+        </div>
+
+        <div id="player-strip-bottom" class="player-strip strip-h" hidden></div>
+
+        <div id="game-bottom-bar">
+            <div id="current-turn-info"></div>
+            <div id="autoplay-controls" hidden>
+                <button id="play-pause-button" class="ctrl-btn" title="Play / Pause">▶</button>
+                <button id="step-button" class="ctrl-btn" title="Step once">⏭</button>
+                <input type="range" id="speed-slider" min="0" max="1000" step="50" value="500" title="Speed">
+            </div>
+            <div class="bottom-bar-spacer"></div>
+            <button id="show-results-button" class="ctrl-btn" hidden title="Show Results">🏆</button>
+            <button id="reset-button" class="ctrl-btn" title="Back to setup">✕</button>
+        </div>
+
+        <div id="game-over-overlay" hidden>
+            <div class="game-over-card">
+                <h2 id="game-over-title"></h2>
+                <div id="game-over-scores"></div>
+                <div class="game-over-actions">
+                    <button id="play-again-button" class="btn-primary">Play Again</button>
+                    <button id="view-board-button" class="btn-ghost">View Board</button>
+                    <button id="back-to-setup-button" class="btn-ghost">Change Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-status" style="display:none;"></div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -45,6 +45,7 @@ import { createGame, applyMove } from './core/game.js';
 import { CanvasRenderer } from './ui/canvas-renderer.js';
 import { setupUI, updateStats, getPlayerConfigs, setPlayerConfigs } from './ui/input.js';
 import { saveSettings, loadSettings } from './ui/settings.js';
+import { initQuickSetup } from './ui/quick-setup.js';
 
 import { getMove as getRandomMove } from './bots/random.js';
 import { getMove as getGreedyMove } from './bots/greedy.js';
@@ -90,6 +91,9 @@ function init() {
     if (savedPlayers) setPlayerConfigs(savedPlayers);
 
     setupUI(null, handleColorSelect, handleReset, handleStep, handleTogglePlay);
+
+    // Quick-setup layer (index.html only; advanced.html has no #quick-setup).
+    initQuickSetup(savedPlayers !== null);
 
     document.getElementById('start-button').onclick = handleStart;
 

@@ -479,9 +479,35 @@ function wireGameOverButtons(onReset, state, onColorSelect, onStep, onTogglePlay
 
 let teamsEnabled = false;
 
+export function refreshPlayerSetup() {
+    renderPlayerSetup();
+}
+
+/**
+ * Programmatically enable/disable teams without reassigning teamIds
+ * (callers are expected to have set config.teamId themselves).
+ */
+export function setTeamsEnabled(enabled) {
+    teamsEnabled = !!enabled;
+    const checkbox = document.getElementById('enable-teams');
+    if (checkbox) checkbox.checked = teamsEnabled;
+    syncTeamsPanelVisibility();
+    renderTeamAssign();
+}
+
+function syncTeamsPanelVisibility() {
+    const panel = document.getElementById('team-assign-panel');
+    const territorySelect = document.getElementById('team-territory');
+    if (panel) panel.style.display = teamsEnabled ? '' : 'none';
+    if (territorySelect) territorySelect.style.display = teamsEnabled ? '' : 'none';
+}
+
 function initTeamsToggle() {
     const checkbox = document.getElementById('enable-teams');
     if (!checkbox) return;
+    // Keep module state in sync with a checkbox restored from saved settings.
+    teamsEnabled = checkbox.checked;
+    syncTeamsPanelVisibility();
     checkbox.onchange = () => {
         teamsEnabled = checkbox.checked;
         const panel = document.getElementById('team-assign-panel');
